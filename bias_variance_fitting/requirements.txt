@@ -3,4 +3,4 @@ plotly
 numpy
 pandas
 sklearn
-scipy
+scikit-learn
