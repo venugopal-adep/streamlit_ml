@@ -38,7 +38,7 @@ def perform_loocv(X, y):
 
 # Streamlit UI setup
 st.title("Cross-Validation Techniques Demonstration")
-st.write(**Developed by : Venugopal Adep**)
+st.write("**Developed by : Venugopal Adep**")
 
 # Sidebar for user input and data regeneration
 st.sidebar.header("Configuration and Data")
