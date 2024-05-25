@@ -10,15 +10,22 @@ from sklearn.svm import SVR
 import pandas as pd
 
 def load_dataset(dataset_name):
-    if dataset_name == "Boston Housing":
-        data = datasets.load_boston()
-    elif dataset_name == "Diabetes":
+    if dataset_name == "Diabetes":
         data = datasets.load_diabetes()
-    elif dataset_name == "California Housing":
-        data = datasets.fetch_california_housing()
-    X = data.data
-    y = data.target
-    return X, y, data
+        X = data.data
+        y = data.target
+        target_name = "Disease Progression"
+    elif dataset_name == "Linnerud":
+        data = datasets.load_linnerud()
+        X = data.data
+        y = data.target[:, 0]  # Select the first target variable (Physiological)
+        target_name = "Physiological"
+    elif dataset_name == "Breast Cancer":
+        data = datasets.load_breast_cancer()
+        X = data.data
+        y = data.target
+        target_name = "Tumor Size"
+    return X, y, target_name, data
 
 def evaluate_model(model, X_test, y_test):
     y_pred = model.predict(X_test)
@@ -29,20 +36,27 @@ def evaluate_model(model, X_test, y_test):
 
 def main():
     st.title("AutoML Regression App")
+    st.write('**Developed by : Venugopal Adep**')
     
-    dataset_name = st.sidebar.selectbox("Select Dataset", ("Boston Housing", "Diabetes", "California Housing"))
+    dataset_options = [
+        "Diabetes",
+        "Linnerud",
+        "Breast Cancer"
+    ]
+    dataset_name = st.sidebar.selectbox("Select Dataset", dataset_options)
     
-    X, y, data = load_dataset(dataset_name)
+    X, y, target_name, data = load_dataset(dataset_name)
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
     
     st.subheader("Dataset")
-    st.write(data['DESCR'])
-    st.write("Dataset shape:", X.shape)
-    
-    df = pd.DataFrame(data.data, columns=data.feature_names)
-    df['target'] = data.target
-    st.write("First 10 rows of the dataset:")
-    st.write(df.head(10))
+    if isinstance(X, pd.DataFrame):
+        st.write("First 10 rows of the dataset:")
+        st.write(X.head(10))
+    else:
+        df = pd.DataFrame(data=X, columns=data.feature_names)
+        df[target_name] = y
+        st.write("First 10 rows of the dataset:")
+        st.write(df.head(10))
     
     models = [
         ("Linear Regression", LinearRegression()),
@@ -55,7 +69,7 @@ def main():
         ("K-Nearest Neighbors", KNeighborsRegressor()),
         ("Support Vector Regression", SVR())
     ]
-    
+    st.write("**Target variable:**", target_name)
     results = []
     for model_name, model in models:
         model.fit(X_train, y_train)
@@ -63,7 +77,10 @@ def main():
         results.append([model_name, mse, mae, r2])
     
     df_results = pd.DataFrame(results, columns=["Model", "MSE", "MAE", "R2"])
-    df_results = df_results.sort_values(by=["MSE", "MAE"], ascending=True)
+    
+    sort_by = st.selectbox("Sort results by", ["MSE", "MAE", "R2"])
+    ascending = True if sort_by in ["MSE", "MAE"] else False
+    df_results = df_results.sort_values(by=sort_by, ascending=ascending)
     
     st.subheader("Evaluation Results")
     st.table(df_results)
@@ -72,7 +89,13 @@ def main():
     best_model = [model for model_name, model in models if model_name == best_model_name][0]
     
     st.subheader("Best Model")
-    st.write(f"The best-performing model is: {best_model_name}")
+    st.write(f"The best-performing model based on {sort_by} is: {best_model_name}")
+    
+    st.subheader("Dataset Description")
+    if hasattr(data, 'DESCR'):
+        st.write(data.DESCR)
+    st.write("Dataset shape:", X.shape)
+    
     
 if __name__ == "__main__":
     main()
