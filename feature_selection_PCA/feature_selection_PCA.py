@@ -7,103 +7,144 @@ from sklearn.decomposition import PCA
 import plotly.express as px
 import plotly.graph_objects as go
 
-# Set page title
-st.set_page_config(page_title="Feature Selection Demo")
+# Set page config
+st.set_page_config(page_title="Feature Selection Explorer", layout="wide", initial_sidebar_state="expanded")
+
+# Custom CSS for better appearance
+st.markdown("""
+<style>
+.stApp {
+    background-color: #f0f2f6;
+}
+.stButton>button {
+    background-color: #4CAF50;
+    color: white;
+}
+.stTabs [data-baseweb="tab-list"] {
+    gap: 2px;
+}
+.stTabs [data-baseweb="tab"] {
+    height: 50px;
+    white-space: pre-wrap;
+    background-color: #e6e6e6;
+    border-radius: 4px 4px 0 0;
+    gap: 1px;
+    padding-top: 10px;
+    padding-bottom: 10px;
+}
+.stTabs [aria-selected="true"] {
+    background-color: #4CAF50;
+    color: white;
+}
+</style>
+""", unsafe_allow_html=True)
 
 # Title and description
-st.write("## Feature Selection Demo")
-st.write('**Developed by : Venugopal Adep**')
-st.markdown("This application demonstrates feature selection in machine learning")
+st.title("🔍 Feature Selection Explorer")
+st.markdown("**Developed by: Venugopal Adep**")
+st.markdown("Discover the power of feature selection in machine learning!")
 
-# Dataset selection
-dataset = st.sidebar.selectbox("Select a dataset", ("Iris", "Wine"))
+# Helper functions
+def load_dataset(dataset_name):
+    if dataset_name == "Iris":
+        return load_iris()
+    else:
+        return load_wine()
 
-# Load the selected dataset
-if dataset == "Iris":
-    data = load_iris()
-else:
-    data = load_wine()
+def perform_feature_selection(X, y, k):
+    selector = SelectKBest(f_classif, k=k)
+    X_selected = selector.fit_transform(X, y)
+    selected_features = [data.feature_names[i] for i in selector.get_support(indices=True)]
+    return X_selected, selected_features, selector
 
-X = data.data
-y = data.target
+def perform_pca(X, n_components):
+    pca = PCA(n_components=n_components)
+    X_pca = pca.fit_transform(X)
+    return X_pca, pca
 
-# Create a DataFrame
-df = pd.DataFrame(X, columns=data.feature_names)
-df['target'] = y
+# Sidebar
+st.sidebar.header("Configuration")
+dataset_name = st.sidebar.selectbox("Select a dataset", ("Iris", "Wine"))
 
-# Feature selection
-st.sidebar.subheader("Feature Selection")
-k = st.sidebar.slider("Number of top features", 1, len(data.feature_names), len(data.feature_names))
+# Load data
+data = load_dataset(dataset_name)
+X, y = data.data, data.target
 
-selector = SelectKBest(f_classif, k=k)
-X_selected = selector.fit_transform(X, y)
+# Dynamically set the maximum value for the slider
+max_features = X.shape[1]
+k = st.sidebar.slider("Number of top features", 1, max_features, max_features)
 
-# Get the selected feature names
-selected_features = [data.feature_names[i] for i in selector.get_support(indices=True)]
-
-# PCA for visualization
-st.sidebar.subheader("PCA")
 n_components = st.sidebar.radio("Number of principal components", (2, 3))
 
-pca = PCA(n_components=n_components)
-X_pca = pca.fit_transform(X_selected)
+# Perform feature selection and PCA
+X_selected, selected_features, selector = perform_feature_selection(X, y, k)
+X_pca, pca = perform_pca(X_selected, n_components)
 
-# Create a DataFrame for visualization
-df_pca = pd.DataFrame(X_pca, columns=[f'PC{i+1}' for i in range(n_components)])
-df_pca['target'] = y
+# Main content
+tab1, tab2, tab3, tab4 = st.tabs(["📊 Data Visualization", "📈 Feature Importance", "🧠 PCA Analysis", "📚 Learn More"])
 
-# Assign colors to selected features
-color_discrete_sequence = px.colors.qualitative.Plotly
-feature_colors = {feature: color_discrete_sequence[i % len(color_discrete_sequence)]
-                  for i, feature in enumerate(selected_features)}
-df_pca['Feature'] = df_pca.index.map(lambda x: selected_features[x % len(selected_features)])
-df_pca['Color'] = df_pca['Feature'].map(feature_colors)
+with tab1:
+    st.header("Data Visualization")
+    
+    df_pca = pd.DataFrame(X_pca, columns=[f'PC{i+1}' for i in range(n_components)])
+    df_pca['target'] = y
+    df_pca['Feature'] = df_pca.index.map(lambda x: selected_features[x % len(selected_features)])
+    
+    color_discrete_sequence = px.colors.qualitative.Plotly
+    feature_colors = {feature: color_discrete_sequence[i % len(color_discrete_sequence)]
+                      for i, feature in enumerate(selected_features)}
+    df_pca['Color'] = df_pca['Feature'].map(feature_colors)
+    
+    if n_components == 2:
+        fig = px.scatter(df_pca, x='PC1', y='PC2', color='Feature', labels={'color': 'Feature'},
+                         title=f"PCA Visualization of Selected Features",
+                         color_discrete_sequence=list(feature_colors.values()))
+    else:
+        fig = px.scatter_3d(df_pca, x='PC1', y='PC2', z='PC3', color='Feature', labels={'color': 'Feature'},
+                            title=f"PCA Visualization of Selected Features",
+                            color_discrete_sequence=list(feature_colors.values()))
+    
+    st.plotly_chart(fig, use_container_width=True)
 
-# Plotly scatter plot
-if n_components == 2:
-    fig = px.scatter(df_pca, x='PC1', y='PC2', color='Feature', labels={'color': 'Feature'},
-                     title=f"PCA Visualization of Selected Features",
-                     color_discrete_sequence=list(feature_colors.values()))
-else:
-    fig = px.scatter_3d(df_pca, x='PC1', y='PC2', z='PC3', color='Feature', labels={'color': 'Feature'},
-                        title=f"PCA Visualization of Selected Features",
-                        color_discrete_sequence=list(feature_colors.values()))
+with tab2:
+    st.header("Feature Importance")
+    
+    feature_importance = selector.scores_
+    fig_importance = go.Figure(data=[go.Bar(x=selected_features, y=feature_importance[selector.get_support(indices=True)],
+                                            marker_color=[feature_colors[feature] for feature in selected_features])])
+    fig_importance.update_layout(xaxis_title="Feature", yaxis_title="Importance Score")
+    st.plotly_chart(fig_importance, use_container_width=True)
 
-# Display the plot
-st.plotly_chart(fig)
+with tab3:
+    st.header("Principal Component Analysis")
+    
+    pc_importance = pca.explained_variance_ratio_
+    fig_pc_importance = go.Figure(data=[go.Bar(x=[f'PC{i+1}' for i in range(n_components)], y=pc_importance,
+                                               marker_color=color_discrete_sequence[:n_components])])
+    fig_pc_importance.update_layout(xaxis_title="Principal Component", yaxis_title="Importance Score")
+    st.plotly_chart(fig_pc_importance, use_container_width=True)
 
-# Bar plot of feature importance
-st.subheader("Feature Importance")
-feature_importance = selector.scores_
-fig_importance = go.Figure(data=[go.Bar(x=selected_features, y=feature_importance[selector.get_support(indices=True)],
-                                         marker_color=[feature_colors[feature] for feature in selected_features])])
-fig_importance.update_layout(xaxis_title="Feature", yaxis_title="Importance Score")
-st.plotly_chart(fig_importance)
+with tab4:
+    st.header("Learn More About Feature Selection")
+    st.markdown("""
+    Feature selection is the process of selecting a subset of relevant features from a larger set of features in a dataset. The main goals of feature selection are:
 
-# Bar plot of principal component importance
-st.subheader("Principal Component Importance")
-pc_importance = pca.explained_variance_ratio_
-fig_pc_importance = go.Figure(data=[go.Bar(x=[f'PC{i+1}' for i in range(n_components)], y=pc_importance,
-                                            marker_color=color_discrete_sequence[:n_components])])
-fig_pc_importance.update_layout(xaxis_title="Principal Component", yaxis_title="Importance Score")
-st.plotly_chart(fig_pc_importance)
+    1. Improve model performance
+    2. Reduce computational complexity
+    3. Enhance interpretability
 
-# Brief writeup on feature selection
-st.subheader("How Feature Selection Works")
-st.markdown("""
-Feature selection is the process of selecting a subset of relevant features (variables) from a larger set of features in a dataset. The goal is to improve model performance, reduce computational complexity, and enhance interpretability by focusing on the most informative features.
+    There are three main approaches to feature selection:
 
-There are different approaches to feature selection, including:
+    1. **Filter methods**: Select features based on statistical measures (e.g., correlation, chi-squared test, information gain).
+    2. **Wrapper methods**: Evaluate subsets of features by training and testing a specific machine learning model (e.g., recursive feature elimination, forward/backward selection).
+    3. **Embedded methods**: Perform feature selection as part of the model training process (e.g., L1 regularization, decision tree-based importance).
 
-1. Filter methods: These methods select features based on statistical measures such as correlation, chi-squared test, or information gain. The features are ranked according to their relevance, and a subset of top-ranked features is selected.
+    This demo uses the SelectKBest method, which is a filter method. It selects the top k features based on a scoring function (F-value between feature and target variable).
 
-2. Wrapper methods: These methods evaluate subsets of features by training and testing a specific machine learning model. The subset that yields the best model performance is selected. Examples include recursive feature elimination (RFE) and forward/backward feature selection.
+    Principal Component Analysis (PCA) is used to visualize the selected features by reducing dimensionality. PCA finds the directions of maximum variance in the data and projects it onto a lower-dimensional subspace.
 
-3. Embedded methods: These methods perform feature selection as part of the model training process. The model itself is responsible for selecting the most relevant features. Examples include L1 regularization (Lasso) and decision tree-based feature importance.
+    By applying feature selection, we can identify the most informative features that contribute to the target variable and potentially improve the performance and interpretability of machine learning models.
+    """)
 
-In this demo, we use the SelectKBest method from scikit-learn, which is a filter method. It selects the top k features based on a scoring function, such as the F-value between the feature and the target variable. The user can interactively choose the number of top features to select using the slider.
-
-The selected features are then visualized using Principal Component Analysis (PCA) to reduce the dimensionality and provide a visual representation of the data. The importance of each selected feature and the principal components are displayed using bar plots.
-
-By applying feature selection, we can identify the most informative features that contribute to the target variable and potentially improve the performance and interpretability of machine learning models.
-""")
+st.sidebar.markdown("---")
+st.sidebar.info("This app demonstrates feature selection techniques. Select a dataset, adjust the number of features, and explore the different tabs to learn more!")
