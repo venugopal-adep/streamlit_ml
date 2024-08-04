@@ -99,7 +99,7 @@ if 'data' not in st.session_state:
     st.session_state.model = train_model(st.session_state.data)
 
 # Main content
-tab1, tab2, tab3, tab4 = st.tabs(["📚 Learn", "🔬 Explore", "📊 Model", "🎯 Predict"])
+tab1, tab2, tab3, tab4, tab5 = st.tabs(["📚 Learn", "🔬 Explore", "📊 Model", "🎯 Predict", "🧠 Quiz"])
 
 with tab1:
     st.header("Understanding Multiple Linear Regression")
@@ -183,41 +183,41 @@ with tab4:
     fig_3d = create_3d_plot(st.session_state.data, input_area, input_rooms, input_kitchens, predicted_price)
     st.plotly_chart(fig_3d, use_container_width=True)
 
-# Quiz
-st.header("Test Your Knowledge")
+with tab5:
+    st.header("🧠 Test Your Knowledge")
 
-questions = [
-    {
-        "question": "What does multiple linear regression allow us to do?",
-        "options": ["Predict based on one variable", "Predict based on multiple variables", "Only work with categorical data"],
-        "correct": 1,
-        "explanation": "Multiple linear regression allows us to predict an outcome based on multiple variables, which can lead to more accurate predictions in complex scenarios."
-    },
-    {
-        "question": "In our house price model, what does a coefficient represent?",
-        "options": ["The total price of the house", "The change in price for a one-unit change in a feature", "The number of features"],
-        "correct": 1,
-        "explanation": "A coefficient in our model represents the change in house price for a one-unit change in the corresponding feature, holding all other features constant."
-    },
-    {
-        "question": "Why might adding more features to a regression model not always improve it?",
-        "options": ["It always improves the model", "It can lead to overfitting", "It makes the model slower"],
-        "correct": 1,
-        "explanation": "While adding more features can improve a model's fit to the training data, it can also lead to overfitting, where the model performs poorly on new, unseen data."
-    }
-]
+    questions = [
+        {
+            "question": "What does multiple linear regression allow us to do?",
+            "options": ["Predict based on one variable", "Predict based on multiple variables", "Only work with categorical data"],
+            "correct": 1,
+            "explanation": "Multiple linear regression allows us to predict an outcome based on multiple variables, which can lead to more accurate predictions in complex scenarios."
+        },
+        {
+            "question": "In our house price model, what does a coefficient represent?",
+            "options": ["The total price of the house", "The change in price for a one-unit change in a feature", "The number of features"],
+            "correct": 1,
+            "explanation": "A coefficient in our model represents the change in house price for a one-unit change in the corresponding feature, holding all other features constant."
+        },
+        {
+            "question": "Why might adding more features to a regression model not always improve it?",
+            "options": ["It always improves the model", "It can lead to overfitting", "It makes the model slower"],
+            "correct": 1,
+            "explanation": "While adding more features can improve a model's fit to the training data, it can also lead to overfitting, where the model performs poorly on new, unseen data."
+        }
+    ]
 
-for i, q in enumerate(questions):
-    st.subheader(f"Question {i+1}: {q['question']}")
-    user_answer = st.radio(f"Select your answer for Question {i+1}:", q['options'], key=f"q{i}")
-    
-    if st.button(f"Check Answer for Question {i+1}", key=f"check{i}"):
-        if q['options'].index(user_answer) == q['correct']:
-            st.success("Correct! Great job!")
-        else:
-            st.error("Not quite. Let's learn from this!")
-        st.info(f"Explanation: {q['explanation']}")
-    st.write("---")
+    for i, q in enumerate(questions):
+        st.subheader(f"Question {i+1}: {q['question']}")
+        user_answer = st.radio(f"Select your answer for Question {i+1}:", q['options'], key=f"q{i}")
+        
+        if st.button(f"Check Answer for Question {i+1}", key=f"check{i}"):
+            if q['options'].index(user_answer) == q['correct']:
+                st.success("Correct! Great job!")
+            else:
+                st.error("Not quite. Let's learn from this!")
+            st.info(f"Explanation: {q['explanation']}")
+        st.write("---")
 
 st.sidebar.markdown("---")
 st.sidebar.info("This app demonstrates multiple linear regression for house price prediction. Generate new data, explore the model, and make predictions!")
