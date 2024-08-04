@@ -118,28 +118,87 @@ with tab1:
 with tab2:
     st.header("Bagging Classifier in Action")
     
+    # Generate and display original data
     X, y = generate_data()
     
-    st.plotly_chart(plot_scatter(X, y, "Original Data"), use_container_width=True)
+    st.subheader("1. Original Data")
+    st.plotly_chart(plot_scatter(X, y, "Original Data Distribution"), use_container_width=True)
     
+    # Train and evaluate bagging classifier
     bagging_clf = train_bagging_classifier(X, y, n_classifiers, sample_size)
-    
     y_pred = bagging_clf.predict(X)
     accuracy = accuracy_score(y, y_pred)
     
-    st.plotly_chart(plot_scatter(X, y_pred, "Bagging Classifier Predictions"), use_container_width=True)
+    # Display bagging classifier results
+    st.subheader("2. Bagging Classifier Results")
+    col1, col2 = st.columns(2)
     
-    st.metric("Bagging Classifier Accuracy", f"{accuracy:.2f}")
+    with col1:
+        st.plotly_chart(plot_scatter(X, y_pred, "Bagging Classifier Predictions"), use_container_width=True)
     
-    if st.button("Show Individual Classifiers"):
-        col1, col2 = st.columns(2)
+    with col2:
+        st.metric("Number of Base Classifiers", n_classifiers)
+        st.metric("Sample Size for Each Classifier", f"{sample_size}%")
+        st.metric("Overall Accuracy", f"{accuracy:.2f}")
+        
+        # Add explanation
+        st.markdown("""
+        <div style="background-color: #f0f0f0; padding: 10px; border-radius: 5px;">
+        <p>The Bagging Classifier combines predictions from multiple base classifiers, 
+        each trained on a random subset of the data. This often results in improved 
+        accuracy and reduced overfitting compared to a single classifier.</p>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    # Individual classifiers
+    st.subheader("3. Individual Base Classifiers")
+    show_individuals = st.checkbox("Show Individual Classifiers")
+    
+    if show_individuals:
         for i, estimator in enumerate(bagging_clf.estimators_):
+            if i % 2 == 0:
+                col1, col2 = st.columns(2)
+            
             y_pred_single = estimator.predict(X)
             fig = plot_scatter(X, y_pred_single, f"Classifier {i+1}")
-            if i % 2 == 0:
-                col1.plotly_chart(fig, use_container_width=True)
-            else:
-                col2.plotly_chart(fig, use_container_width=True)
+            
+            with col1 if i % 2 == 0 else col2:
+                st.plotly_chart(fig, use_container_width=True)
+                accuracy_single = accuracy_score(y, y_pred_single)
+                st.metric(f"Classifier {i+1} Accuracy", f"{accuracy_single:.2f}")
+        
+        st.markdown("""
+        <div style="background-color: #f0f0f0; padding: 10px; border-radius: 5px;">
+        <p>Each base classifier is trained on a random subset of the data. 
+        Notice how individual classifiers might have lower accuracy than the 
+        ensemble, but together they create a more robust model.</p>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    # Comparison
+    st.subheader("4. Comparison with Single Classifier")
+    single_clf = SVC(kernel='linear', probability=True)
+    single_clf.fit(X, y)
+    y_pred_single = single_clf.predict(X)
+    accuracy_single = accuracy_score(y, y_pred_single)
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.plotly_chart(plot_scatter(X, y_pred_single, "Single Classifier Predictions"), use_container_width=True)
+        st.metric("Single Classifier Accuracy", f"{accuracy_single:.2f}")
+    
+    with col2:
+        st.plotly_chart(plot_scatter(X, y_pred, "Bagging Classifier Predictions"), use_container_width=True)
+        st.metric("Bagging Classifier Accuracy", f"{accuracy:.2f}")
+    
+    st.markdown("""
+    <div style="background-color: #f0f0f0; padding: 10px; border-radius: 5px;">
+    <p>Compare the performance of a single classifier with the bagging ensemble. 
+    The bagging classifier often provides more stable and accurate predictions, 
+    especially for complex datasets.</p>
+    </div>
+    """, unsafe_allow_html=True)
 
 with tab3:
     st.header("Solved Example: Iris Dataset")
