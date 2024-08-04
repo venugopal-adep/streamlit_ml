@@ -2,57 +2,53 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import plotly.express as px
+import plotly.graph_objects as go
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 
-# Set page configuration
-st.set_page_config(page_title="Regression Metrics Explorer", layout="wide")
+# Set page config
+st.set_page_config(page_title="Regression Metrics Explorer", layout="wide", initial_sidebar_state="expanded")
 
-# Custom CSS for visual appeal
+# Custom CSS for better appearance
 st.markdown("""
 <style>
-    .main {
-        background-color: #f0f8ff;
-    }
-    .stButton>button {
-        background-color: #4CAF50;
-        color: white;
-        font-weight: bold;
-        border-radius: 20px;
-        padding: 10px 20px;
-        transition: all 0.3s;
-    }
-    .stButton>button:hover {
-        background-color: #45a049;
-        transform: scale(1.05);
-    }
-    .stTextInput>div>div>input {
-        background-color: #e0e0e0;
-    }
-    h1, h2, h3 {
-        color: #2c3e50;
-        font-family: 'Arial', sans-serif;
-    }
-    .stTab {
-        background-color: #f1f8ff;
-        padding: 20px;
-        border-radius: 10px;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-    }
+.stApp {
+    background-color: #f0f8ff;
+}
+.stButton>button {
+    background-color: #4b0082;
+    color: white;
+}
+.stTabs [data-baseweb="tab-list"] {
+    gap: 2px;
+}
+.stTabs [data-baseweb="tab"] {
+    height: 50px;
+    white-space: pre-wrap;
+    background-color: #e6e6fa;
+    border-radius: 4px 4px 0 0;
+    gap: 1px;
+    padding-top: 10px;
+    padding-bottom: 10px;
+}
+.stTabs [aria-selected="true"] {
+    background-color: #8a2be2;
+    color: white;
+}
+.highlight {
+    background-color: #ffd700;
+    padding: 5px;
+    border-radius: 3px;
+}
 </style>
 """, unsafe_allow_html=True)
 
-# Title and introduction
+# Title and description
 st.title("📊 Regression Metrics Explorer")
 st.markdown("**Developed by: Venugopal Adep**")
+st.markdown("Discover the key metrics used to evaluate regression models!")
 
-st.markdown("""
-Welcome to the Regression Metrics Explorer! Dive into the world of linear regression
-and understand how different metrics evaluate model performance. Explore the impact
-of data points and noise on regression results and metrics.
-""")
-
-# Functions
+# Helper functions
 @st.cache_data
 def generate_data(n, noise_level):
     np.random.seed(42)
@@ -74,83 +70,114 @@ def fit_and_evaluate(data):
     
     return Y_pred, r2, adj_r2, mae, rmse, model
 
-# Main content using tabs
-tab1, tab2, tab3, tab4 = st.tabs(["📊 Model", "📈 Metrics", "🔬 Explore", "📚 Learn"])
+def plot_regression(data, Y_pred):
+    fig = px.scatter(data, x='X', y='Y', title="Linear Regression Fit")
+    fig.add_scatter(x=data['X'], y=Y_pred, mode='lines', name='Regression Line')
+    fig.update_layout(template="plotly_white")
+    return fig
+
+def plot_metrics_vs_noise(noise_range, metrics_df):
+    fig = px.line(metrics_df, x='Noise', y=['R-squared', 'Adjusted R-squared', 'MAE'],
+                  title="Impact of Noise on Metrics")
+    fig.update_layout(template="plotly_white")
+    return fig
+
+# Sidebar
+st.sidebar.header("Data Configuration")
+n_points = st.sidebar.slider('Number of Data Points', min_value=50, max_value=500, value=100, step=50)
+noise_level = st.sidebar.slider('Noise Level', min_value=0.1, max_value=10.0, value=1.0, step=0.1)
+
+# Generate data
+if 'data' not in st.session_state or st.sidebar.button("Generate New Data"):
+    st.session_state.data = generate_data(n_points, noise_level)
+    st.session_state.Y_pred, st.session_state.r2, st.session_state.adj_r2, st.session_state.mae, st.session_state.rmse, st.session_state.model = fit_and_evaluate(st.session_state.data)
+
+# Main content
+tab1, tab2, tab3, tab4 = st.tabs(["📚 Learn", "📊 Model", "📈 Metrics", "🧠 Quiz"])
 
 with tab1:
+    st.header("Understanding Regression Metrics")
+    
+    st.markdown("""
+    <div style="background-color: #e6e6fa; padding: 20px; border-radius: 10px;">
+    <h3>What are Regression Metrics?</h3>
+    <p>Regression metrics are statistical measures used to evaluate the performance of a regression model. They help us understand how well the model fits the data and makes predictions. Key metrics include:</p>
+    <ul>
+        <li><strong>R-squared (R²):</strong> Measures the proportion of variance in the dependent variable explained by the independent variables.</li>
+        <li><strong>Adjusted R-squared:</strong> A modified version of R² that adjusts for the number of predictors in the model.</li>
+        <li><strong>Mean Absolute Error (MAE):</strong> The average of the absolute differences between predictions and actual values.</li>
+        <li><strong>Root Mean Square Error (RMSE):</strong> The square root of the average of squared differences between predictions and actual values.</li>
+    </ul>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    st.markdown("""
+    <div style="background-color: #fff0f5; padding: 20px; border-radius: 10px; margin-top: 20px;">
+    <h3>Why are these Metrics Important?</h3>
+    <ul>
+        <li><span class="highlight">Model Comparison:</span> Help in comparing different models to choose the best one.</li>
+        <li><span class="highlight">Performance Evaluation:</span> Provide insights into how well the model is performing.</li>
+        <li><span class="highlight">Error Understanding:</span> Give different perspectives on the types of errors in the model's predictions.</li>
+    </ul>
+    </div>
+    """, unsafe_allow_html=True)
+
+with tab2:
     st.header("📊 Model Overview")
     
     col1, col2 = st.columns([2, 1])
     
-    with col2:
-        st.subheader("Data Controls")
-        n_points = st.slider('Number of Data Points', min_value=50, max_value=500, value=100, step=50)
-        noise_level = st.slider('Noise Level', min_value=0.1, max_value=10.0, value=1.0, step=0.1)
-        
-        data = generate_data(n_points, noise_level)
-        Y_pred, r2, adj_r2, mae, rmse, model = fit_and_evaluate(data)
-        
-        st.subheader("Regression Equation")
-        st.latex(f"Y = {model.coef_[0]:.2f}X + {model.intercept_:.2f}")
-        
-        st.subheader("Model Metrics")
-        st.metric("R-squared", f"{r2:.4f}")
-        st.metric("Adjusted R-squared", f"{adj_r2:.4f}")
-        st.metric("MAE", f"{mae:.4f}")
-        st.metric("RMSE", f"{rmse:.4f}")
-    
     with col1:
-        fig = px.scatter(data, x='X', y='Y', title="Linear Regression Fit")
-        fig.add_scatter(x=data['X'], y=Y_pred, mode='lines', name='Regression Line')
+        fig = plot_regression(st.session_state.data, st.session_state.Y_pred)
         st.plotly_chart(fig, use_container_width=True)
     
+    with col2:
+        st.subheader("Regression Equation")
+        st.latex(f"Y = {st.session_state.model.coef_[0]:.2f}X + {st.session_state.model.intercept_:.2f}")
+        
+        st.subheader("Model Metrics")
+        st.metric("R-squared", f"{st.session_state.r2:.4f}")
+        st.metric("Adjusted R-squared", f"{st.session_state.adj_r2:.4f}")
+        st.metric("MAE", f"{st.session_state.mae:.4f}")
+        st.metric("RMSE", f"{st.session_state.rmse:.4f}")
+    
     with st.expander("View Data"):
-        st.write(data)
+        st.write(st.session_state.data)
 
-with tab2:
+with tab3:
     st.header("📈 Metrics Interpretation")
     
     st.subheader("R-squared (R²)")
     st.write(f"""
-    Current value: {r2:.4f}
+    Current value: {st.session_state.r2:.4f}
     
-    R-squared is a statistical measure that represents the proportion of the variance in the dependent variable
-    that is predictable from the independent variable(s). It ranges from 0 to 1, where:
-    - 0 indicates that the model explains none of the variability of the response data around its mean.
-    - 1 indicates that the model explains all the variability.
+    R-squared represents the proportion of the variance in the dependent variable that is predictable from the independent variable(s).
     
-    In this case, {r2:.2%} of the variance in Y can be explained by X.
+    In this case, {st.session_state.r2:.2%} of the variance in Y can be explained by X.
     """)
     
     st.subheader("Adjusted R-squared")
     st.write(f"""
-    Current value: {adj_r2:.4f}
+    Current value: {st.session_state.adj_r2:.4f}
     
-    Adjusted R-squared is a modified version of R-squared that adjusts for the number of predictors in a model.
-    It increases only if the new term improves the model more than would be expected by chance.
-    It's particularly useful when comparing models with different numbers of predictors.
+    Adjusted R-squared modifies R-squared by accounting for the number of predictors in the model. It's useful when comparing models with different numbers of predictors.
     """)
     
     st.subheader("Mean Absolute Error (MAE)")
     st.write(f"""
-    Current value: {mae:.4f}
+    Current value: {st.session_state.mae:.4f}
     
-    MAE measures the average magnitude of the errors in a set of predictions, without considering their direction.
-    It's the average over the test sample of the absolute differences between prediction and actual observation.
-    In this case, on average, our predictions are off by {mae:.2f} units.
+    MAE represents the average magnitude of the errors in a set of predictions, without considering their direction.
+    On average, our predictions are off by {st.session_state.mae:.2f} units.
     """)
     
     st.subheader("Root Mean Square Error (RMSE)")
     st.write(f"""
-    Current value: {rmse:.4f}
+    Current value: {st.session_state.rmse:.4f}
     
     RMSE is the square root of the average of squared differences between prediction and actual observation.
-    It gives a relatively high weight to large errors, making it useful when large errors are particularly undesirable.
-    Our model's RMSE of {rmse:.2f} indicates the standard deviation of the residuals (prediction errors).
+    It gives a relatively high weight to large errors.
     """)
-
-with tab3:
-    st.header("🔬 Explore Relationships")
     
     st.subheader("Impact of Noise on Metrics")
     noise_range = np.linspace(0.1, 10, 100)
@@ -162,8 +189,7 @@ with tab3:
         'MAE': [m[3] for m in metrics]
     })
     
-    fig_metrics = px.line(metrics_df, x='Noise', y=['R-squared', 'Adjusted R-squared', 'MAE'],
-                          title="Impact of Noise on Metrics")
+    fig_metrics = plot_metrics_vs_noise(noise_range, metrics_df)
     st.plotly_chart(fig_metrics, use_container_width=True)
     
     st.write("""
@@ -174,66 +200,40 @@ with tab3:
     """)
 
 with tab4:
-    st.header("📚 Learning Center")
+    st.header("Test Your Knowledge")
     
-    st.subheader("Key Concepts in Regression Analysis")
-    st.write("""
-    1. **Linear Regression**: A statistical method for modeling the relationship between a dependent variable and one or more independent variables.
-    
-    2. **Residuals**: The differences between the observed values and the predicted values from the regression model.
-    
-    3. **Overfitting**: When a model learns the training data too well, including its noise and fluctuations, leading to poor generalization to new data.
-    
-    4. **Underfitting**: When a model is too simple to capture the underlying structure of the data, leading to poor performance on both training and new data.
-    
-    5. **Bias-Variance Tradeoff**: The property of a model that the variance of the parameter estimates across samples can be reduced by increasing the bias in the estimated parameters.
-    """)
-    
-    st.subheader("Quiz")
     questions = [
         {
-            "question": "What does a R-squared value of 0.75 indicate?",
-            "options": ["The model explains 75% of the variability in the data", "The model is 75% accurate", "75% of the predictions are correct"],
-            "answer": 0,
-            "explanation": "An R-squared value of 0.75 indicates that 75% of the variance in the dependent variable can be explained by the independent variable(s) in the model."
+            "question": "What does R-squared measure?",
+            "options": ["The proportion of variance explained by the model", "The average error of the model", "The slope of the regression line", "The number of predictors in the model"],
+            "correct": 0,
+            "explanation": "R-squared measures the proportion of variance in the dependent variable that is predictable from the independent variable(s)."
         },
         {
-            "question": "When is Adjusted R-squared particularly useful?",
-            "options": ["When dealing with time series data", "When comparing models with different numbers of predictors", "When the data is normally distributed"],
-            "answer": 1,
-            "explanation": "Adjusted R-squared is particularly useful when comparing models with different numbers of predictors. It adjusts for the number of predictors in the model, penalizing the addition of extraneous predictors."
+            "question": "Which metric is not affected by the scale of the data?",
+            "options": ["MAE", "RMSE", "R-squared", "All of the above"],
+            "correct": 2,
+            "explanation": "R-squared is not affected by the scale of the data because it represents a proportion of explained variance."
         },
         {
-            "question": "Which metric is more sensitive to outliers?",
-            "options": ["MAE", "RMSE", "R-squared"],
-            "answer": 1,
-            "explanation": "RMSE (Root Mean Square Error) is more sensitive to outliers than MAE. This is because RMSE squares the errors before averaging them, which gives more weight to large errors."
+            "question": "What happens to the regression metrics as noise in the data increases?",
+            "options": ["R-squared increases", "MAE decreases", "RMSE decreases", "R-squared decreases"],
+            "correct": 3,
+            "explanation": "As noise in the data increases, R-squared typically decreases because the model's ability to explain the variance in the data decreases."
         }
     ]
     
     for i, q in enumerate(questions):
-        st.subheader(f"Question {i+1}")
-        st.write(q["question"])
-        user_answer = st.radio(f"Select your answer for question {i+1}:", q['options'], key=f"q{i}")
+        st.subheader(f"Question {i+1}: {q['question']}")
+        user_answer = st.radio(f"Select your answer for Question {i+1}:", q['options'], key=f"q{i}")
         
         if st.button(f"Check Answer for Question {i+1}", key=f"check{i}"):
-            if q['options'].index(user_answer) == q['answer']:
-                st.success("Correct! 🎉")
+            if q['options'].index(user_answer) == q['correct']:
+                st.success("Correct! Great job!")
             else:
-                st.error(f"Not quite. The correct answer is: {q['options'][q['answer']]}")
-            
-            st.markdown("**Explanation:**")
-            st.write(q['explanation'])
-            st.markdown("---")
+                st.error("Not quite. Let's learn from this!")
+            st.info(f"Explanation: {q['explanation']}")
+        st.write("---")
 
-st.markdown("""
-## 🎓 Conclusion
-
-Congratulations on exploring Regression Metrics! Remember:
-
-- 📊 Different metrics provide different insights into model performance.
-- 🔍 Consider multiple metrics when evaluating your regression model.
-- 📈 The choice of metric depends on your specific problem and goals.
-
-Keep exploring and refining your understanding of regression analysis!
-""")
+st.sidebar.markdown("---")
+st.sidebar.info("This app demonstrates regression metrics. Adjust the settings, generate new data, and explore the different tabs to learn more!")
