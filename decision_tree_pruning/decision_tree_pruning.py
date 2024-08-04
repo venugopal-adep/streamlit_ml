@@ -68,7 +68,7 @@ X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_
 # Sidebar
 st.sidebar.header("Pruning Settings")
 prune_level = st.sidebar.slider("Max Depth:", min_value=1, max_value=10, value=3, step=1)
-min_samples_split = st.sidebar.slider("Min Samples Split:", min_value=2, max_value=20, value=2, step=1)
+min_samples_split = st.sidebar.slider("Min Samples Split:", min_value=2, max_value=50, value=2, step=1)
 ccp_alpha = st.sidebar.slider("Cost Complexity (alpha):", min_value=0.0, max_value=0.05, value=0.0, step=0.001, format="%.3f")
 
 # Helper functions
