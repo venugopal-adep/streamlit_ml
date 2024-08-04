@@ -2,55 +2,51 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import plotly.express as px
+import plotly.graph_objects as go
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 
-# Set page configuration
-st.set_page_config(page_title="Linear Regression: Residual Error Explorer", layout="wide")
+# Set page config
+st.set_page_config(page_title="Linear Regression Residual Error Explorer", layout="wide", initial_sidebar_state="expanded")
 
-# Custom CSS for visual appeal
+# Custom CSS for better appearance
 st.markdown("""
 <style>
-    .main {
-        background-color: #f0f8ff;
-    }
-    .stButton>button {
-        background-color: #4CAF50;
-        color: white;
-        font-weight: bold;
-        border-radius: 20px;
-        padding: 10px 20px;
-        transition: all 0.3s;
-    }
-    .stButton>button:hover {
-        background-color: #45a049;
-        transform: scale(1.05);
-    }
-    .stTextInput>div>div>input {
-        background-color: #e0e0e0;
-    }
-    h1, h2, h3 {
-        color: #2c3e50;
-        font-family: 'Arial', sans-serif;
-    }
-    .stTab {
-        background-color: #f1f8ff;
-        padding: 20px;
-        border-radius: 10px;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-    }
+.stApp {
+    background-color: #f0f8ff;
+}
+.stButton>button {
+    background-color: #4b0082;
+    color: white;
+}
+.stTabs [data-baseweb="tab-list"] {
+    gap: 2px;
+}
+.stTabs [data-baseweb="tab"] {
+    height: 50px;
+    white-space: pre-wrap;
+    background-color: #e6e6fa;
+    border-radius: 4px 4px 0 0;
+    gap: 1px;
+    padding-top: 10px;
+    padding-bottom: 10px;
+}
+.stTabs [aria-selected="true"] {
+    background-color: #8a2be2;
+    color: white;
+}
+.highlight {
+    background-color: #ffd700;
+    padding: 5px;
+    border-radius: 3px;
+}
 </style>
 """, unsafe_allow_html=True)
 
-# Title and introduction
+# Title and description
 st.title("📏 Linear Regression: Residual Error Explorer")
 st.markdown("**Developed by: Venugopal Adep**")
-
-st.markdown("""
-Welcome to the Linear Regression Residual Error Explorer! Dive into the world of linear regression
-and understand how residuals play a crucial role in model evaluation. Explore different datasets,
-visualize the regression line, and analyze the residuals to gain insights into model performance.
-""")
+st.markdown("Discover the importance of residuals in linear regression analysis!")
 
 # Define datasets
 datasets = {
@@ -72,7 +68,7 @@ datasets = {
     })
 }
 
-# Functions
+# Helper functions
 def train_model(data):
     model = LinearRegression()
     model.fit(data[['Height']], data['Weight'])
@@ -94,139 +90,150 @@ def plot_data_with_residuals(data):
     fig.update_layout(template="plotly_white")
     return fig
 
-# Main content using tabs
-tab1, tab2, tab3, tab4 = st.tabs(["📊 Model", "🔬 Residuals", "📈 Metrics", "📚 Learn"])
+def plot_residuals(data):
+    fig = px.scatter(data, x='Predicted Weight', y='Residual', 
+                     title='Residual Plot',
+                     labels={'Predicted Weight': 'Predicted Weight (lbs)', 'Residual': 'Residual (lbs)'})
+    fig.add_hline(y=0, line_dash="dash", line_color="red")
+    fig.update_layout(template="plotly_white")
+    return fig
+
+def plot_residual_distribution(data):
+    fig = px.histogram(data, x='Residual', title='Distribution of Residuals')
+    fig.update_layout(template="plotly_white")
+    return fig
+
+# Sidebar
+st.sidebar.header("Dataset Selection")
+dataset_choice = st.sidebar.selectbox("Select Dataset", list(datasets.keys()))
+
+# Load and process data
+data = datasets[dataset_choice]
+model = train_model(data)
+data['Predicted Weight'] = model.predict(data[['Height']])
+data['Residual'] = data['Weight'] - data['Predicted Weight']
+data['Residual^2'] = data['Residual'] ** 2
+mae, mse, r2 = calculate_metrics(data, data['Predicted Weight'])
+
+# Main content
+tab1, tab2, tab3, tab4 = st.tabs(["📚 Learn", "📊 Model", "🔬 Residuals", "🧠 Quiz"])
 
 with tab1:
+    st.header("Understanding Linear Regression and Residuals")
+    
+    st.markdown("""
+    <div style="background-color: #e6e6fa; padding: 20px; border-radius: 10px;">
+    <h3>What is Linear Regression?</h3>
+    <p>Linear regression is a statistical method for modeling the relationship between a dependent variable (y) and one or more independent variables (x). In this case:</p>
+    <ul>
+        <li><strong>x (independent variable):</strong> Height</li>
+        <li><strong>y (dependent variable):</strong> Weight</li>
+        <li><strong>Regression Line:</strong> The line that best fits the data points</li>
+    </ul>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    st.markdown("""
+    <div style="background-color: #fff0f5; padding: 20px; border-radius: 10px; margin-top: 20px;">
+    <h3>What are Residuals?</h3>
+    <p>Residuals are the differences between the observed values and the predicted values from the regression model. They represent the error in our predictions.</p>
+    <ul>
+        <li><span class="highlight">Residual = Actual Value - Predicted Value</span></li>
+        <li>Analyzing residuals helps us assess the model's performance and assumptions.</li>
+        <li>The regression line is obtained by minimizing the sum of squared residuals.</li>
+    </ul>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    st.markdown("""
+    <div style="background-color: #f0fff0; padding: 20px; border-radius: 10px; margin-top: 20px;">
+    <h3>Key Metrics in Linear Regression</h3>
+    <ul>
+        <li><strong>Mean Absolute Error (MAE):</strong> Average of the absolute differences between predictions and actual values.</li>
+        <li><strong>Mean Squared Error (MSE):</strong> Average of the squared differences between predictions and actual values.</li>
+        <li><strong>R² Score:</strong> Proportion of the variance in the dependent variable that is predictable from the independent variable(s).</li>
+    </ul>
+    </div>
+    """, unsafe_allow_html=True)
+
+with tab2:
     st.header("📊 Model Overview")
     
     col1, col2 = st.columns([2, 1])
     
+    with col1:
+        fig = plot_data_with_residuals(data)
+        st.plotly_chart(fig, use_container_width=True)
+    
     with col2:
-        # Dataset selection
-        dataset_choice = st.selectbox("Select Dataset", list(datasets.keys()))
-        data = datasets[dataset_choice]
-        
-        # Train model and make predictions
-        model = train_model(data)
-        data['Predicted Weight'] = model.predict(data[['Height']])
-        data['Residual'] = data['Weight'] - data['Predicted Weight']
-        data['Residual^2'] = data['Residual'] ** 2
-        
-        # Regression Equation
         st.subheader("Regression Equation")
         st.latex(f"\\hat{{Y}} = {model.intercept_:.2f} + {model.coef_[0]:.4f}X")
         
-        # Calculate metrics
-        mae, mse, r2 = calculate_metrics(data, data['Predicted Weight'])
-        
-        # Display metrics
         st.subheader("Model Metrics")
         st.metric("Mean Absolute Error (MAE)", f"{mae:.2f}")
         st.metric("Mean Squared Error (MSE)", f"{mse:.2f}")
         st.metric("R² Score", f"{r2:.2f}")
     
-    with col1:
-        # Model Visualization
-        fig = plot_data_with_residuals(data)
-        st.plotly_chart(fig, use_container_width=True)
-    
-    # Data Table (collapsible)
     with st.expander("View Data Table"):
         st.write(data)
 
-with tab2:
+with tab3:
     st.header("🔬 Residual Analysis")
     
-    st.subheader("Residual Plot")
-    fig_residuals = px.scatter(data, x='Predicted Weight', y='Residual', 
-                               title='Residual Plot',
-                               labels={'Predicted Weight': 'Predicted Weight (lbs)', 'Residual': 'Residual (lbs)'})
-    fig_residuals.add_hline(y=0, line_dash="dash", line_color="red")
-    st.plotly_chart(fig_residuals, use_container_width=True)
+    col1, col2 = st.columns(2)
     
-    st.subheader("Residual Distribution")
-    fig_hist = px.histogram(data, x='Residual', title='Distribution of Residuals')
-    st.plotly_chart(fig_hist, use_container_width=True)
-
-with tab3:
-    st.header("📈 Model Metrics")
+    with col1:
+        st.subheader("Residual Plot")
+        fig_residuals = plot_residuals(data)
+        st.plotly_chart(fig_residuals, use_container_width=True)
     
-    col1, col2, col3 = st.columns(3)
-    col1.metric("Mean Absolute Error (MAE)", f"{mae:.2f}")
-    col2.metric("Mean Squared Error (MSE)", f"{mse:.2f}")
-    col3.metric("R² Score", f"{r2:.2f}")
+    with col2:
+        st.subheader("Residual Distribution")
+        fig_hist = plot_residual_distribution(data)
+        st.plotly_chart(fig_hist, use_container_width=True)
     
     st.subheader("Interpretation")
-    st.write(f"""
-    - **MAE**: On average, our predictions are off by {mae:.2f} lbs.
-    - **MSE**: The average squared difference between predicted and actual weights is {mse:.2f} lbs².
-    - **R²**: {r2:.2%} of the variance in weight can be explained by height in this model.
+    st.write("""
+    - The Residual Plot shows the difference between actual and predicted values.
+    - Ideally, residuals should be randomly scattered around the zero line.
+    - The Residual Distribution should be approximately normal and centered around zero.
     """)
 
 with tab4:
-    st.header("📚 Learning Center")
+    st.header("Test Your Knowledge")
     
-    st.subheader("Understanding Linear Regression and Residuals")
-    st.write("""
-    Linear regression is a statistical method for modeling the relationship between a dependent variable (y) and one or more independent variables (x). In this case:
-    
-    - **x (independent variable)**: Height
-    - **y (dependent variable)**: Weight
-    - **Regression Line**: The line that best fits the data points
-    - **Residuals**: The vertical distance between each data point and the regression line
-    
-    Key points to remember:
-    1. The regression line is obtained by minimizing the sum of squared residuals.
-    2. Residuals represent the error in our predictions.
-    3. Analyzing residuals helps us assess the model's performance and assumptions.
-    """)
-    
-    st.subheader("Quiz")
     questions = [
         {
-            "question": "What does a residual represent in this context?",
-            "options": ["The predicted weight", "The difference between actual and predicted weight", "The height of a person"],
-            "answer": 1,
-            "explanation": "A residual is the difference between the actual weight and the predicted weight for each data point. It represents how far off our prediction is from the actual value."
+            "question": "What does a residual represent in linear regression?",
+            "options": ["The predicted value", "The actual value", "The difference between actual and predicted value"],
+            "correct": 2,
+            "explanation": "A residual is the difference between the actual observed value and the predicted value from the regression model."
         },
         {
             "question": "What does a high R² score indicate?",
-            "options": ["Poor model fit", "Strong linear relationship", "No relationship between variables"],
-            "answer": 1,
-            "explanation": "A high R² score (close to 1) indicates a strong linear relationship between the variables. It suggests that a large portion of the variability in weight can be explained by height in our model."
+            "options": ["Poor model fit", "Strong relationship between variables", "No relationship between variables"],
+            "correct": 1,
+            "explanation": "A high R² score (close to 1) indicates a strong relationship between the variables, suggesting that a large portion of the variability in the dependent variable can be explained by the independent variable(s)."
         },
         {
             "question": "In an ideal residual plot, what pattern should we see?",
-            "options": ["A clear trend", "Random scatter around zero", "All positive residuals"],
-            "answer": 1,
+            "options": ["A clear upward trend", "A clear downward trend", "Random scatter around zero"],
+            "correct": 2,
             "explanation": "In an ideal residual plot, we should see a random scatter of points around the zero line. This suggests that our model's errors are random and not systematically biased in any direction."
         }
     ]
     
     for i, q in enumerate(questions):
-        st.subheader(f"Question {i+1}")
-        st.write(q["question"])
-        user_answer = st.radio(f"Select your answer for question {i+1}:", q['options'], key=f"q{i}")
+        st.subheader(f"Question {i+1}: {q['question']}")
+        user_answer = st.radio(f"Select your answer for Question {i+1}:", q['options'], key=f"q{i}")
         
         if st.button(f"Check Answer for Question {i+1}", key=f"check{i}"):
-            if q['options'].index(user_answer) == q['answer']:
-                st.success("Correct! 🎉")
+            if q['options'].index(user_answer) == q['correct']:
+                st.success("Correct! Great job!")
             else:
-                st.error(f"Not quite. The correct answer is: {q['options'][q['answer']]}")
-            
-            st.markdown("**Explanation:**")
-            st.write(q['explanation'])
-            st.markdown("---")
+                st.error("Not quite. Let's learn from this!")
+            st.info(f"Explanation: {q['explanation']}")
+        st.write("---")
 
-st.markdown("""
-## 🎓 Conclusion
-
-Congratulations on exploring Linear Regression and Residual Analysis! Remember:
-
-- 📊 The regression line helps us understand the relationship between variables.
-- 🔍 Residuals are crucial for assessing model performance and assumptions.
-- 📈 Metrics like MAE, MSE, and R² provide quantitative measures of model fit.
-
-Keep exploring and refining your understanding of statistical modeling!
-""")
+st.sidebar.markdown("---")
+st.sidebar.info("This app explores linear regression and residual analysis. Select different datasets to see how the model and residuals change!")
