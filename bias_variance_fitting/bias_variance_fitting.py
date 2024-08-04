@@ -2,60 +2,56 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import plotly.express as px
+import plotly.graph_objects as go
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import PolynomialFeatures
 from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import r2_score
 
-# Set page configuration
-st.set_page_config(page_title="Bias-Variance Tradeoff Explorer", layout="wide")
+# Set page config
+st.set_page_config(page_title="Bias-Variance Tradeoff Explorer", layout="wide", initial_sidebar_state="expanded")
 
-# Custom CSS for visual appeal
+# Custom CSS for better appearance
 st.markdown("""
 <style>
-    .main {
-        background-color: #f0f8ff;
-    }
-    .stButton>button {
-        background-color: #4CAF50;
-        color: white;
-        font-weight: bold;
-        border-radius: 20px;
-        padding: 10px 20px;
-        transition: all 0.3s;
-    }
-    .stButton>button:hover {
-        background-color: #45a049;
-        transform: scale(1.05);
-    }
-    .stTextInput>div>div>input {
-        background-color: #e0e0e0;
-    }
-    h1, h2, h3 {
-        color: #2c3e50;
-        font-family: 'Arial', sans-serif;
-    }
-    .stTab {
-        background-color: #f1f8ff;
-        padding: 20px;
-        border-radius: 10px;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-    }
+.stApp {
+    background-color: #f0f8ff;
+}
+.stButton>button {
+    background-color: #4b0082;
+    color: white;
+}
+.stTabs [data-baseweb="tab-list"] {
+    gap: 2px;
+}
+.stTabs [data-baseweb="tab"] {
+    height: 50px;
+    white-space: pre-wrap;
+    background-color: #e6e6fa;
+    border-radius: 4px 4px 0 0;
+    gap: 1px;
+    padding-top: 10px;
+    padding-bottom: 10px;
+}
+.stTabs [aria-selected="true"] {
+    background-color: #8a2be2;
+    color: white;
+}
+.highlight {
+    background-color: #ffd700;
+    padding: 5px;
+    border-radius: 3px;
+}
 </style>
 """, unsafe_allow_html=True)
 
-# Title and introduction
+# Title and description
 st.title("🎢 Bias-Variance Tradeoff Explorer")
 st.markdown("**Developed by: Venugopal Adep**")
+st.markdown("Discover the balance between model complexity and performance!")
 
-st.markdown("""
-Welcome to the Bias-Variance Tradeoff Explorer! Dive into the world of model fitting and
-understand the delicate balance between underfitting and overfitting. Interact with different
-polynomial degrees and see how they affect model performance!
-""")
-
-# Functions
+# Helper functions
 @st.cache_data
 def generate_data(n_points):
     np.random.seed(42)
@@ -74,150 +70,145 @@ def fit_models(X, Y, degrees):
 
 def plot_models(X, Y, models, X_test, Y_test):
     X_plot = np.linspace(0, 10, 100).reshape(-1, 1)
-    fig = px.scatter(x=X.squeeze(), y=Y, labels={'x': 'X', 'y': 'Y'}, title="Model Fitting Demonstrations")
-    fig.add_scatter(x=X_test.squeeze(), y=Y_test, mode='markers', name='Test Data')
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(x=X.squeeze(), y=Y, mode='markers', name='Training Data'))
+    fig.add_trace(go.Scatter(x=X_test.squeeze(), y=Y_test, mode='markers', name='Test Data'))
 
     for degree, model in models.items():
         Y_plot = model.predict(X_plot)
-        fig.add_scatter(x=X_plot.squeeze(), y=Y_plot, mode='lines', name=f'Degree {degree}')
+        fig.add_trace(go.Scatter(x=X_plot.squeeze(), y=Y_plot, mode='lines', name=f'Degree {degree}'))
 
-    fig.update_layout(template="plotly_white")
+    fig.update_layout(title="Model Fitting Demonstrations", xaxis_title="X", yaxis_title="Y")
     return fig
 
-# Main content using tabs
-tab1, tab2, tab3, tab4 = st.tabs(["🔬 Explore", "📊 Model Comparison", "📈 Metrics", "📚 Learn"])
+# Sidebar
+st.sidebar.header("Model Configuration")
+n_points = st.sidebar.slider("Number of Data Points", 30, 150, 50)
+degrees = st.sidebar.multiselect("Degrees of Polynomial", [1, 2, 3, 5, 10, 20], default=[1, 3, 10])
+
+if st.sidebar.button("Generate New Data"):
+    st.session_state['X'], st.session_state['Y'] = generate_data(n_points)
+
+# Initialize session state
+if 'X' not in st.session_state or 'Y' not in st.session_state:
+    st.session_state['X'], st.session_state['Y'] = generate_data(n_points)
+
+# Main content
+tab1, tab2, tab3, tab4 = st.tabs(["📚 Learn", "🔬 Explore", "📊 Compare", "🧠 Quiz"])
 
 with tab1:
+    st.header("Understanding Bias-Variance Tradeoff")
+    
+    st.markdown("""
+    <div style="background-color: #e6e6fa; padding: 20px; border-radius: 10px;">
+    <h3>What is the Bias-Variance Tradeoff?</h3>
+    <p>The bias-variance tradeoff is a fundamental concept in machine learning that deals with the balance between:</p>
+    <ul>
+        <li><strong>Bias:</strong> The error from overly simplistic assumptions in the learning algorithm.</li>
+        <li><strong>Variance:</strong> The error from sensitivity to small fluctuations in the training set.</li>
+    </ul>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    st.markdown("""
+    <div style="background-color: #fff0f5; padding: 20px; border-radius: 10px; margin-top: 20px;">
+    <h3>Key Concepts</h3>
+    <h4>1. Underfitting (High Bias)</h4>
+    <p>When a model is too simple to capture the underlying pattern in the data.</p>
+    <h4>2. Overfitting (High Variance)</h4>
+    <p>When a model is too complex and starts fitting to noise in the training data.</p>
+    <h4>3. Model Complexity</h4>
+    <p>The degree of flexibility in the model, often related to the number of parameters.</p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    st.markdown("""
+    <div style="background-color: #f0fff0; padding: 20px; border-radius: 10px; margin-top: 20px;">
+    <h3>Why is it Important?</h3>
+    <ul>
+        <li><span class="highlight">Model Selection:</span> Helps in choosing the right level of model complexity.</li>
+        <li><span class="highlight">Generalization:</span> Ensures the model performs well on unseen data.</li>
+        <li><span class="highlight">Performance Optimization:</span> Balances the tradeoff for optimal predictive performance.</li>
+    </ul>
+    </div>
+    """, unsafe_allow_html=True)
+
+with tab2:
     st.header("🔬 Data and Model Explorer")
-    
-    col1, col2 = st.columns(2)
-    with col1:
-        n_points = st.slider("Number of Data Points", 30, 150, 50)
-    with col2:
-        degrees = st.multiselect("Degrees of Polynomial", [1, 2, 3, 5, 10, 20], default=[1, 3, 10])
-    
-    if st.button("🔄 Generate New Data"):
-        st.session_state['X'], st.session_state['Y'] = generate_data(n_points)
-        st.success("New data generated!")
-    
-    if 'X' not in st.session_state or 'Y' not in st.session_state:
-        st.session_state['X'], st.session_state['Y'] = generate_data(n_points)
     
     X_train, X_test, Y_train, Y_test = train_test_split(st.session_state['X'], st.session_state['Y'], test_size=0.2, random_state=42)
     models = fit_models(X_train, Y_train, degrees)
     
     fig = plot_models(X_train, Y_train, models, X_test, Y_test)
     st.plotly_chart(fig, use_container_width=True)
-
-with tab2:
-    st.header("📊 Model Comparison")
     
-    if 'X' in st.session_state and 'Y' in st.session_state:
-        X_train, X_test, Y_train, Y_test = train_test_split(st.session_state['X'], st.session_state['Y'], test_size=0.2, random_state=42)
-        models = fit_models(X_train, Y_train, degrees)
-        
-        for degree in degrees:
-            st.subheader(f"Polynomial Degree: {degree}")
-            X_plot = np.linspace(0, 10, 100).reshape(-1, 1)
-            Y_plot = models[degree].predict(X_plot)
-            
-            fig = px.scatter(x=X_train.squeeze(), y=Y_train, labels={'x': 'X', 'y': 'Y'})
-            fig.add_scatter(x=X_test.squeeze(), y=Y_test, mode='markers', name='Test Data')
-            fig.add_scatter(x=X_plot.squeeze(), y=Y_plot, mode='lines', name=f'Degree {degree} Model')
-            fig.update_layout(template="plotly_white")
-            
-            st.plotly_chart(fig, use_container_width=True)
-    else:
-        st.warning("Please generate data in the Explore tab first.")
+    st.markdown("""
+    <div style="background-color: #fffacd; padding: 10px; border-radius: 5px;">
+    <p><strong>Interpretation:</strong> Observe how different polynomial degrees fit the data. 
+    Lower degrees might underfit (high bias), while higher degrees might overfit (high variance).</p>
+    </div>
+    """, unsafe_allow_html=True)
 
 with tab3:
-    st.header("📈 Model Metrics")
+    st.header("📊 Model Comparison")
     
-    if 'X' in st.session_state and 'Y' in st.session_state:
-        X_train, X_test, Y_train, Y_test = train_test_split(st.session_state['X'], st.session_state['Y'], test_size=0.2, random_state=42)
-        models = fit_models(X_train, Y_train, degrees)
-        
-        metrics_data = []
-        for degree, model in models.items():
-            train_score = r2_score(Y_train, model.predict(X_train))
-            test_score = r2_score(Y_test, model.predict(X_test))
-            metrics_data.append({"Degree": degree, "Train R²": train_score, "Test R²": test_score})
-        
-        metrics_df = pd.DataFrame(metrics_data)
-        st.table(metrics_df.style.format({"Train R²": "{:.2f}", "Test R²": "{:.2f}"}))
-        
-        fig = px.line(metrics_df, x="Degree", y=["Train R²", "Test R²"], title="R² Scores vs Polynomial Degree")
-        fig.update_layout(template="plotly_white")
-        st.plotly_chart(fig, use_container_width=True)
-    else:
-        st.warning("Please generate data in the Explore tab first.")
+    metrics_data = []
+    for degree, model in models.items():
+        train_score = r2_score(Y_train, model.predict(X_train))
+        test_score = r2_score(Y_test, model.predict(X_test))
+        metrics_data.append({"Degree": degree, "Train R²": train_score, "Test R²": test_score})
+    
+    metrics_df = pd.DataFrame(metrics_data)
+    
+    fig = px.line(metrics_df, x="Degree", y=["Train R²", "Test R²"], 
+                  title="R² Scores vs Polynomial Degree",
+                  labels={"value": "R² Score", "variable": "Dataset"})
+    st.plotly_chart(fig, use_container_width=True)
+    
+    st.table(metrics_df.style.format({"Train R²": "{:.2f}", "Test R²": "{:.2f}"}))
+    
+    st.markdown("""
+    <div style="background-color: #e6e6fa; padding: 10px; border-radius: 5px;">
+    <p><strong>Key Insight:</strong> Look for the degree where test R² is highest. 
+    This is often the best balance between bias and variance.</p>
+    </div>
+    """, unsafe_allow_html=True)
 
 with tab4:
-    st.header("📚 Learning Center")
+    st.header("Test Your Knowledge")
     
-    st.subheader("Understanding Bias-Variance Tradeoff")
-    st.write("""
-    The bias-variance tradeoff is a fundamental concept in machine learning:
-    
-    - **Bias**: The error due to overly simplistic assumptions in the learning algorithm. High bias can cause an algorithm to miss relevant relations between features and target outputs (underfitting).
-    
-    - **Variance**: The error due to too much complexity in the learning algorithm. High variance can cause an algorithm to model the random noise in the training data, rather than the intended outputs (overfitting).
-    
-    - **Tradeoff**: As we increase the complexity of our model, we'll see a reduction in error due to lower bias in the model. However, this complexity will also lead to an increase in error due to higher variance.
-    """)
-    
-    st.subheader("Insights from the Demo")
-    st.write("""
-    - **Lower Degree Models**: May underfit the data (high bias, low variance). They're too simple to capture the underlying pattern.
-    - **Higher Degree Models**: May overfit the data (low bias, high variance). They're so complex that they start to model the noise in the data.
-    - **Optimal Degree**: Balances bias and variance to generalize well on unseen data. It captures the underlying pattern without fitting the noise.
-    
-    The goal is to find the sweet spot where the model complexity is just right - capturing the true underlying pattern without fitting to noise.
-    """)
-    
-    st.subheader("Quiz")
     questions = [
         {
-            "question": "What typically happens to the training error as we increase model complexity?",
-            "options": ["Increases", "Decreases", "Stays the same"],
-            "answer": 1,
-            "explanation": "As we increase model complexity (e.g., higher degree polynomials), the training error typically decreases. This is because a more complex model can fit the training data more closely. However, be cautious - a very low training error doesn't always mean a good model!"
+            "question": "What happens to model complexity as we increase the polynomial degree?",
+            "options": ["Decreases", "Increases", "Stays the same"],
+            "correct": 1,
+            "explanation": "As we increase the polynomial degree, the model becomes more complex, allowing it to fit more intricate patterns in the data."
         },
         {
             "question": "Which type of model is more likely to have high bias?",
-            "options": ["A simple linear model", "A complex polynomial model", "They're equally likely to have high bias"],
-            "answer": 0,
-            "explanation": "A simple linear model is more likely to have high bias. Bias refers to the error introduced by approximating a real-world problem with a simplified model. Simple models often make strong assumptions about the data, which can lead to underfitting."
+            "options": ["A simple linear model", "A high-degree polynomial model", "They're equally likely to have high bias"],
+            "correct": 0,
+            "explanation": "A simple linear model is more likely to have high bias. It might be too simple to capture the underlying pattern in the data, leading to underfitting."
         },
         {
-            "question": "What's the main risk of using a very high-degree polynomial model?",
-            "options": ["Underfitting", "Overfitting", "It's always the best choice"],
-            "answer": 1,
-            "explanation": "The main risk of using a very high-degree polynomial model is overfitting. Such models can become so complex that they start fitting to the noise in the training data, rather than just the underlying pattern. This leads to poor generalization on new, unseen data."
+            "question": "What's a sign that a model might be overfitting?",
+            "options": ["High training error, low test error", "Low training error, high test error", "Both training and test errors are high"],
+            "correct": 1,
+            "explanation": "Low training error but high test error is a classic sign of overfitting. The model has learned the training data too well, including its noise, and doesn't generalize to new data."
         }
     ]
     
     for i, q in enumerate(questions):
-        st.subheader(f"Question {i+1}")
-        st.write(q["question"])
-        user_answer = st.radio(f"Select your answer for question {i+1}:", q['options'], key=f"q{i}")
+        st.subheader(f"Question {i+1}: {q['question']}")
+        user_answer = st.radio(f"Select your answer for Question {i+1}:", q['options'], key=f"q{i}")
         
         if st.button(f"Check Answer for Question {i+1}", key=f"check{i}"):
-            if q['options'].index(user_answer) == q['answer']:
-                st.success("Correct! 🎉")
+            if q['options'].index(user_answer) == q['correct']:
+                st.success("Correct! Great job!")
             else:
-                st.error(f"Not quite. The correct answer is: {q['options'][q['answer']]}")
-            
-            st.markdown("**Explanation:**")
-            st.write(q['explanation'])
-            st.markdown("---")
+                st.error("Not quite. Let's learn from this!")
+            st.info(f"Explanation: {q['explanation']}")
+        st.write("---")
 
-st.markdown("""
-## 🎓 Conclusion
-
-Congratulations on exploring the Bias-Variance Tradeoff! Remember:
-
-- 📊 The goal is to find the right balance between model simplicity and complexity.
-- 🧮 A good model captures the underlying patterns without fitting to noise.
-- 🚀 Keep exploring different models and always validate on unseen data!
-""")
+st.sidebar.markdown("---")
+st.sidebar.info("This app demonstrates the bias-variance tradeoff. Adjust the settings, generate new data, and explore the different tabs to learn more!")
