@@ -169,7 +169,8 @@ with tab3:
     sample_mean = np.mean(single_sample)
     
     # Perform bootstrap
-    bootstrap_means = bootstrap_samples(single_sample, 1000, 50)
+    n_bootstrap = 1000
+    bootstrap_means = bootstrap_samples(single_sample, n_bootstrap, 50)
     
     # Calculate confidence interval
     ci_lower, ci_upper = np.percentile(bootstrap_means, [2.5, 97.5])
@@ -196,6 +197,19 @@ with tab3:
         st.metric("95% Confidence Interval", f"({ci_lower:.2f}, {ci_upper:.2f})", 
                   help="We're 95% confident the true mean falls in this range.")
     
+    # Show confidence interval calculation
+    st.subheader("How we calculated the Confidence Interval:")
+    st.markdown(f"""
+    1. We created {n_bootstrap} bootstrap samples from our original sample.
+    2. For each bootstrap sample, we calculated its mean.
+    3. We sorted these {n_bootstrap} means from lowest to highest.
+    4. For a 95% confidence interval:
+       - We took the 2.5th percentile as the lower bound: {ci_lower:.2f}
+       - We took the 97.5th percentile as the upper bound: {ci_upper:.2f}
+    
+    This means that 95% of our bootstrap sample means fall between these two values.
+    """)
+    
     # Plotting
     fig = go.Figure()
     fig.add_trace(go.Histogram(x=bootstrap_means, nbinsx=30, name='Bootstrap Means'))
@@ -214,22 +228,22 @@ with tab3:
     st.plotly_chart(fig, use_container_width=True)
     
     # Explanation
-    st.markdown("""
+    st.markdown(f"""
     <div style="background-color: #f0fff0; padding: 20px; border-radius: 10px; margin-top: 20px;">
     <h3>What does this mean?</h3>
     <ul>
-        <li>Our best guess for the average tree height is {:.2f} (our sample mean).</li>
-        <li>We're 95% confident that the true average height of all trees is between {:.2f} and {:.2f}.</li>
+        <li>Our best guess for the average tree height is {sample_mean:.2f} (our sample mean).</li>
+        <li>We're 95% confident that the true average height of all trees is between {ci_lower:.2f} and {ci_upper:.2f}.</li>
         <li>The histogram shows how our guess might vary if we took different samples of 50 trees.</li>
         <li>The closer our green line (sample mean) is to the red line (true mean), the better our guess!</li>
     </ul>
     <p>Bootstrap helps us understand how reliable our guess is, even when we can't measure every single tree in the forest.</p>
     </div>
-    """.format(sample_mean, ci_lower, ci_upper), unsafe_allow_html=True)
+    """, unsafe_allow_html=True)
     
     # Interactive element
     if st.button("Try Another Sample"):
-        st.experimental_rerun()
+        st.rerun()
 
 with tab4:
     st.header("Test Your Knowledge")
