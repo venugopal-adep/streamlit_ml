@@ -198,22 +198,22 @@ with tab4:
     
     questions = [
         {
-            "question": "What is the main purpose of bootstrap sampling?",
-            "options": ["To increase sample size", "To estimate sampling distributions", "To reduce data collection costs", "To eliminate outliers"],
+            "question": "What is bootstrap sampling used for?",
+            "options": ["To make the original data larger", "To estimate properties of a population", "To remove outliers from data", "To collect new data"],
             "correct": 1,
-            "explanation": "Bootstrap sampling helps us estimate the sampling distribution of a statistic, which in turn helps us understand the variability and uncertainty in our estimates."
+            "explanation": "Bootstrap sampling is used to estimate properties (like mean or standard deviation) of a population by resampling from the original data we have."
         },
         {
-            "question": "What does 'sampling with replacement' mean in bootstrap sampling?",
-            "options": ["Each sample is returned before the next draw", "Samples are taken without returning them", "Only unique samples are used", "Samples are replaced with new data"],
+            "question": "In bootstrap sampling, we sample:",
+            "options": ["With replacement", "Without replacement", "From a different dataset", "Only once"],
             "correct": 0,
-            "explanation": "'Sampling with replacement' means that after each individual sample is drawn, it's put back into the dataset before the next draw. This allows the same data point to be sampled multiple times, mimicking sampling from an infinite population."
+            "explanation": "In bootstrap sampling, we sample with replacement. This means after we select a data point, we put it back before selecting the next one, allowing the same data point to be chosen multiple times."
         },
         {
-            "question": "How does bootstrap sampling help in estimating the standard error?",
-            "options": ["It doesn't estimate standard error", "By calculating the average of all samples", "By measuring the variability of bootstrap sample statistics", "By increasing the original sample size"],
+            "question": "How many bootstrap samples are typically used?",
+            "options": ["Just 1", "Around 10", "Usually 100 or more", "Exactly 50"],
             "correct": 2,
-            "explanation": "Bootstrap sampling estimates the standard error by calculating the standard deviation of the bootstrap sample statistics (e.g., means). This provides a measure of the variability in our estimates without making assumptions about the underlying distribution."
+            "explanation": "We typically use a large number of bootstrap samples, usually 100 or more. More samples give us a better estimate of the population properties."
         }
     ]
     
@@ -223,9 +223,9 @@ with tab4:
         
         if st.button(f"Check Answer for Question {i+1}", key=f"check{i}"):
             if q['options'].index(user_answer) == q['correct']:
-                st.success("Correct! Well done!")
+                st.success("Correct! Great job!")
             else:
-                st.error("Incorrect. Let's review this concept.")
+                st.error("Not quite. Let's learn from this!")
             st.info(f"Explanation: {q['explanation']}")
         st.write("---")
 
