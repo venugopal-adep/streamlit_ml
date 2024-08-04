@@ -1,11 +1,13 @@
 import streamlit as st
 import plotly.graph_objects as go
+import plotly.express as px
 import numpy as np
-from sklearn.datasets import make_classification
+import pandas as pd
+from sklearn.datasets import make_classification, load_iris
 from sklearn.ensemble import BaggingClassifier
 from sklearn.svm import SVC
+from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
-import matplotlib.pyplot as plt
 
 # Set page config
 st.set_page_config(page_title="Bagging Classifier Explorer", layout="wide", initial_sidebar_state="expanded")
@@ -14,10 +16,10 @@ st.set_page_config(page_title="Bagging Classifier Explorer", layout="wide", init
 st.markdown("""
 <style>
 .stApp {
-    background-color: #f0f2f6;
+    background-color: #f0f8ff;
 }
 .stButton>button {
-    background-color: #4CAF50;
+    background-color: #4b0082;
     color: white;
 }
 .stTabs [data-baseweb="tab-list"] {
@@ -26,15 +28,20 @@ st.markdown("""
 .stTabs [data-baseweb="tab"] {
     height: 50px;
     white-space: pre-wrap;
-    background-color: #e6e6e6;
+    background-color: #e6e6fa;
     border-radius: 4px 4px 0 0;
     gap: 1px;
     padding-top: 10px;
     padding-bottom: 10px;
 }
 .stTabs [aria-selected="true"] {
-    background-color: #4CAF50;
+    background-color: #8a2be2;
     color: white;
+}
+.highlight {
+    background-color: #ffd700;
+    padding: 5px;
+    border-radius: 3px;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -49,120 +56,136 @@ st.sidebar.header("Classifier Settings")
 n_classifiers = st.sidebar.slider("Number of classifiers:", min_value=1, max_value=10, value=3, step=1)
 sample_size = st.sidebar.slider("Sample size (% of original data):", min_value=10, max_value=100, value=50, step=10)
 
+# Helper functions
+@st.cache_data
+def generate_data():
+    X, y = make_classification(n_samples=200, n_classes=2, random_state=42)
+    return X, y
+
+def train_bagging_classifier(X, y, n_classifiers, sample_size):
+    bagging_clf = BaggingClassifier(
+        estimator=SVC(kernel='linear', probability=True),
+        n_estimators=n_classifiers,
+        max_samples=sample_size/100,
+        random_state=42
+    )
+    bagging_clf.fit(X, y)
+    return bagging_clf
+
+def plot_scatter(X, y, title):
+    fig = px.scatter(x=X[:, 0], y=X[:, 1], color=y, title=title,
+                     labels={'x': 'Feature 1', 'y': 'Feature 2'},
+                     color_continuous_scale='viridis')
+    fig.update_layout(template="plotly_white")
+    return fig
+
 # Main content
-tab1, tab2, tab3, tab4 = st.tabs(["📊 Visualization", "🧮 Solved Example", "🧠 Quiz", "📚 Learn More"])
+tab1, tab2, tab3, tab4 = st.tabs(["📚 Learn", "📊 Visualization", "🧮 Example", "🧠 Quiz"])
 
 with tab1:
-    st.header("Bagging Classifier in Action")
+    st.header("Learn About Bagging")
     
-    # Generate sample data
-    X, y = make_classification(n_samples=200, n_classes=2, random_state=42)
+    st.markdown("""
+    <div style="background-color: #e6e6fa; padding: 20px; border-radius: 10px; margin-bottom: 20px;">
+    <h3>What is Bagging?</h3>
+    <p>Bagging, short for Bootstrap Aggregating, is like asking multiple experts for their opinion and then taking a vote. 
+    Each 'expert' (or model) looks at a slightly different version of the data and makes its own decision.</p>
+    </div>
+    """, unsafe_allow_html=True)
     
-    # Create a scatter plot of the original data
-    fig_original = go.Figure(data=[go.Scatter(x=X[:, 0], y=X[:, 1], mode='markers', 
-                                              marker=dict(color=y, colorscale='Viridis', size=8))])
-    fig_original.update_layout(title='Original Data', xaxis_title='Feature 1', yaxis_title='Feature 2',
-                               template="plotly_white")
-    st.plotly_chart(fig_original, use_container_width=True)
+    st.markdown("""
+    <div style="background-color: #fff0f5; padding: 20px; border-radius: 10px; margin-top: 20px;">
+    <h3>How Does Bagging Work?</h3>
+    <ol>
+        <li><span class="highlight">Bootstrap Sampling:</span> Create multiple subsets of the original dataset by randomly sampling with replacement.</li>
+        <li><span class="highlight">Model Training:</span> Train a separate model on each subset.</li>
+        <li><span class="highlight">Aggregation:</span> Combine the predictions of all models (e.g., by voting for classification or averaging for regression).</li>
+    </ol>
+    </div>
+    """, unsafe_allow_html=True)
     
-    # Bootstrap sampling and training individual classifiers
-    classifiers = []
-    col1, col2 = st.columns(2)
-    
-    for i in range(n_classifiers):
-        indices = np.random.choice(len(X), size=int(len(X) * sample_size / 100), replace=True)
-        X_subset, y_subset = X[indices], y[indices]
-        clf = SVC(kernel='linear', probability=True)
-        clf.fit(X_subset, y_subset)
-        classifiers.append(clf)
-        
-        # Create a scatter plot for each classifier
-        fig_classifier = go.Figure(data=[go.Scatter(x=X_subset[:, 0], y=X_subset[:, 1], mode='markers', 
-                                                    marker=dict(color=y_subset, colorscale='Viridis', size=8))])
-        fig_classifier.update_layout(title=f'Classifier {i+1}', xaxis_title='Feature 1', yaxis_title='Feature 2',
-                                     template="plotly_white")
-        
-        if i % 2 == 0:
-            with col1:
-                st.plotly_chart(fig_classifier, use_container_width=True)
-        else:
-            with col2:
-                st.plotly_chart(fig_classifier, use_container_width=True)
-    
-    # Aggregate the predictions of individual classifiers
-    bagging_clf = BaggingClassifier(estimator=SVC(kernel='linear', probability=True), n_estimators=n_classifiers)
-    bagging_clf.fit(X, y)
-    
-    # Make predictions using the bagging classifier
-    y_pred = bagging_clf.predict(X)
-    
-    # Create a scatter plot of the bagging classifier's predictions
-    fig_bagging = go.Figure(data=[go.Scatter(x=X[:, 0], y=X[:, 1], mode='markers', 
-                                             marker=dict(color=y_pred, colorscale='Viridis', size=8))])
-    fig_bagging.update_layout(title='Bagging Classifier Predictions', xaxis_title='Feature 1', yaxis_title='Feature 2',
-                              template="plotly_white")
-    st.plotly_chart(fig_bagging, use_container_width=True)
-    
-    # Evaluate the bagging classifier
-    accuracy = accuracy_score(y, y_pred)
-    st.metric("Bagging Classifier Accuracy", f"{accuracy:.2f}")
+    st.markdown("""
+    <div style="background-color: #f0fff0; padding: 20px; border-radius: 10px; margin-top: 20px;">
+    <h3>Why Use Bagging?</h3>
+    <ul>
+        <li><span class="highlight">Reduces Overfitting:</span> By combining multiple models, bagging helps to average out individual errors.</li>
+        <li><span class="highlight">Improves Stability:</span> The ensemble is less affected by small changes in the data.</li>
+        <li><span class="highlight">Increases Accuracy:</span> Often performs better than individual models.</li>
+    </ul>
+    </div>
+    """, unsafe_allow_html=True)
 
 with tab2:
+    st.header("Bagging Classifier in Action")
+    
+    X, y = generate_data()
+    
+    st.plotly_chart(plot_scatter(X, y, "Original Data"), use_container_width=True)
+    
+    bagging_clf = train_bagging_classifier(X, y, n_classifiers, sample_size)
+    
+    y_pred = bagging_clf.predict(X)
+    accuracy = accuracy_score(y, y_pred)
+    
+    st.plotly_chart(plot_scatter(X, y_pred, "Bagging Classifier Predictions"), use_container_width=True)
+    
+    st.metric("Bagging Classifier Accuracy", f"{accuracy:.2f}")
+    
+    if st.button("Show Individual Classifiers"):
+        col1, col2 = st.columns(2)
+        for i, estimator in enumerate(bagging_clf.estimators_):
+            y_pred_single = estimator.predict(X)
+            fig = plot_scatter(X, y_pred_single, f"Classifier {i+1}")
+            if i % 2 == 0:
+                col1.plotly_chart(fig, use_container_width=True)
+            else:
+                col2.plotly_chart(fig, use_container_width=True)
+
+with tab3:
     st.header("Solved Example: Iris Dataset")
     
-    from sklearn.datasets import load_iris
-    from sklearn.model_selection import train_test_split
-    
-    # Load Iris dataset
     iris = load_iris()
     X_iris, y_iris = iris.data, iris.target
     
-    # Split the data
     X_train, X_test, y_train, y_test = train_test_split(X_iris, y_iris, test_size=0.3, random_state=42)
     
-    # Train a bagging classifier
     bagging_clf_iris = BaggingClassifier(n_estimators=10, random_state=42)
     bagging_clf_iris.fit(X_train, y_train)
     
-    # Make predictions
     y_pred_iris = bagging_clf_iris.predict(X_test)
-    
-    # Calculate accuracy
     accuracy_iris = accuracy_score(y_test, y_pred_iris)
     
-    st.write(f"We trained a Bagging Classifier on the Iris dataset with 10 base estimators.")
-    st.write(f"The accuracy on the test set is: {accuracy_iris:.2f}")
+    st.write("We trained a Bagging Classifier on the Iris dataset with 10 base estimators.")
+    st.metric("Test Accuracy", f"{accuracy_iris:.2f}")
     
-    # Visualize feature importance
     feature_importance = np.mean([tree.feature_importances_ for tree in bagging_clf_iris.estimators_], axis=0)
     
-    fig, ax = plt.subplots()
-    ax.bar(iris.feature_names, feature_importance)
-    ax.set_title("Feature Importance in Bagging Classifier")
-    ax.set_ylabel("Importance")
-    st.pyplot(fig)
+    fig = px.bar(x=iris.feature_names, y=feature_importance, 
+                 labels={'x': 'Features', 'y': 'Importance'},
+                 title="Feature Importance in Bagging Classifier")
+    st.plotly_chart(fig, use_container_width=True)
 
-with tab3:
+with tab4:
     st.header("Test Your Knowledge")
     
     questions = [
         {
-            "question": "What is the main advantage of using Bagging?",
-            "options": ["Increased model complexity", "Reduced overfitting", "Faster training time", "Smaller model size"],
+            "question": "What does Bagging stand for?",
+            "options": ["Boosting Aggregation", "Bootstrap Aggregating", "Best Aggregation", "Balanced Aggregating"],
             "correct": 1,
-            "explanation": "Bagging helps reduce overfitting by training multiple models on different subsets of the data. This ensemble approach helps to average out the individual models' errors, resulting in a more robust and generalizable final model."
+            "explanation": "Bagging stands for Bootstrap Aggregating. It involves creating multiple subsets of the data through bootstrap sampling and aggregating the results of models trained on these subsets."
         },
         {
-            "question": "In Bagging, how are the subsets of data chosen for each base estimator?",
-            "options": ["Randomly with replacement", "Randomly without replacement", "Sequentially", "Based on feature importance"],
-            "correct": 0,
-            "explanation": "In Bagging, subsets are chosen randomly with replacement. This means that some samples may appear multiple times in a subset, while others may not appear at all. This process, known as bootstrap sampling, introduces variability among the base estimators."
+            "question": "How does Bagging help improve model performance?",
+            "options": ["By making the model more complex", "By reducing overfitting", "By increasing training time", "By using only the best features"],
+            "correct": 1,
+            "explanation": "Bagging helps improve model performance by reducing overfitting. It does this by training multiple models on different subsets of the data and combining their predictions."
         },
         {
-            "question": "What is typically used as the base estimator in a Random Forest?",
-            "options": ["Support Vector Machine", "Logistic Regression", "Decision Tree", "Neural Network"],
-            "correct": 2,
-            "explanation": "Random Forest is a specific type of Bagging where the base estimators are Decision Trees. Each tree in the forest is trained on a bootstrap sample of the data, and typically considers only a random subset of features when splitting nodes."
+            "question": "In Bagging, how are the final predictions made?",
+            "options": ["By choosing the best model", "By averaging all model predictions", "By using only the first model", "By using the most recent model"],
+            "correct": 1,
+            "explanation": "In Bagging, the final predictions are typically made by averaging all model predictions (for regression) or by majority voting (for classification). This helps to reduce the impact of individual model errors."
         }
     ]
     
@@ -172,37 +195,11 @@ with tab3:
         
         if st.button(f"Check Answer for Question {i+1}", key=f"check{i}"):
             if q['options'].index(user_answer) == q['correct']:
-                st.success("Correct!")
+                st.success("Correct! Well done!")
             else:
-                st.error("Incorrect. Try again!")
-            st.write(f"Explanation: {q['explanation']}")
+                st.error("Not quite right. Let's learn from this!")
+            st.info(f"Explanation: {q['explanation']}")
         st.write("---")
-
-with tab4:
-    st.header("Learn More About Bagging")
-    st.markdown("""
-    Bagging, short for Bootstrap Aggregating, is an ensemble learning technique that combines multiple models to improve prediction accuracy and reduce overfitting. Here's how it works:
-
-    1. **Bootstrap Sampling**: Create multiple subsets of the original dataset by randomly sampling with replacement.
-    2. **Model Training**: Train a separate model on each subset.
-    3. **Aggregation**: Combine the predictions of all models (e.g., by voting for classification or averaging for regression).
-
-    Key benefits of Bagging:
-    - Reduces overfitting
-    - Improves stability and accuracy
-    - Works well with high-variance, low-bias models (e.g., decision trees)
-
-    Popular implementations:
-    - Random Forests (Bagging with Decision Trees)
-    - Extra Trees
-
-    When to use Bagging:
-    - When you have a complex dataset prone to overfitting
-    - When you want to improve model stability and reduce variance
-    - When you have computational resources to train multiple models
-
-    Remember, while Bagging is powerful, it's not always the best choice. Consider other ensemble methods like Boosting or Stacking depending on your specific problem and dataset characteristics.
-    """)
 
 st.sidebar.markdown("---")
 st.sidebar.info("This app demonstrates the power of Bagging in machine learning. Adjust the settings and explore the different tabs to learn more!")
