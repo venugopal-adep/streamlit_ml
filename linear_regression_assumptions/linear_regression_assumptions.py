@@ -7,54 +7,49 @@ from sklearn.linear_model import LinearRegression
 from statsmodels.stats.outliers_influence import variance_inflation_factor
 from scipy.stats import probplot
 
-# Set page configuration
-st.set_page_config(page_title="Linear Regression Assumptions", layout="wide")
+# Set page config
+st.set_page_config(page_title="Linear Regression Assumptions Explorer", layout="wide", initial_sidebar_state="expanded")
 
-# Custom CSS for visual appeal
+# Custom CSS for better appearance
 st.markdown("""
 <style>
-    .main {
-        background-color: #f0f8ff;
-    }
-    .stButton>button {
-        background-color: #4CAF50;
-        color: white;
-        font-weight: bold;
-        border-radius: 20px;
-        padding: 10px 20px;
-        transition: all 0.3s;
-    }
-    .stButton>button:hover {
-        background-color: #45a049;
-        transform: scale(1.05);
-    }
-    .stTextInput>div>div>input {
-        background-color: #e0e0e0;
-    }
-    h1, h2, h3 {
-        color: #2c3e50;
-        font-family: 'Arial', sans-serif;
-    }
-    .stTab {
-        background-color: #f1f8ff;
-        padding: 20px;
-        border-radius: 10px;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-    }
+.stApp {
+    background-color: #f0f8ff;
+}
+.stButton>button {
+    background-color: #4b0082;
+    color: white;
+}
+.stTabs [data-baseweb="tab-list"] {
+    gap: 2px;
+}
+.stTabs [data-baseweb="tab"] {
+    height: 50px;
+    white-space: pre-wrap;
+    background-color: #e6e6fa;
+    border-radius: 4px 4px 0 0;
+    gap: 1px;
+    padding-top: 10px;
+    padding-bottom: 10px;
+}
+.stTabs [aria-selected="true"] {
+    background-color: #8a2be2;
+    color: white;
+}
+.highlight {
+    background-color: #ffd700;
+    padding: 5px;
+    border-radius: 3px;
+}
 </style>
 """, unsafe_allow_html=True)
 
-# Title and introduction
-st.title("🔬 Linear Regression Assumptions")
+# Title and description
+st.title("🔬 Linear Regression Assumptions Explorer")
 st.markdown("**Developed by: Venugopal Adep**")
+st.markdown("Discover the key assumptions of linear regression and their importance!")
 
-st.markdown("""
-Welcome to the Statistical Analysis Tool! This interactive application helps you explore 
-fundamental statistical concepts through visualizations. Adjust the parameters in the sidebar
-to see how they affect various statistical tests and assumptions.
-""")
-
-# Functions
+# Helper functions
 @st.cache_data
 def generate_data(n, noise, non_linearity=False, multicollinearity_factor=0):
     np.random.seed(42)
@@ -105,93 +100,133 @@ def plot_normality_test(residuals):
                       showlegend=True, template="plotly_white")
     return fig
 
-# Sidebar controls
-st.sidebar.header("Data Options")
+# Sidebar
+st.sidebar.header("Data Configuration")
 n = st.sidebar.slider("Number of Observations", 100, 1000, 500)
 noise = st.sidebar.slider("Noise Level", 0.1, 10.0, 1.0, 0.1)
 non_linearity = st.sidebar.checkbox("Introduce Non-linearity")
 multicollinearity_factor = st.sidebar.slider("Multicollinearity Factor", 0.0, 1.0, 0.0, 0.1)
 
-# Generate data based on sidebar inputs
-data = generate_data(n, noise, non_linearity, multicollinearity_factor)
+# Generate data
+if 'data' not in st.session_state or st.sidebar.button("Generate New Data"):
+    st.session_state.data = generate_data(n, noise, non_linearity, multicollinearity_factor)
 
-# Main content using tabs
-tab1, tab2, tab3, tab4, tab5 = st.tabs(["📊 Data", "📈 Linearity", "🔗 Multicollinearity", "🔄 Heteroscedasticity", "🔔 Normality"])
+# Main content
+tab1, tab2, tab3, tab4, tab5 = st.tabs(["📚 Learn", "📊 Data", "📈 Assumptions", "🧮 Analysis", "🧠 Quiz"])
 
 with tab1:
+    st.header("Understanding Linear Regression Assumptions")
+    
+    st.markdown("""
+    <div style="background-color: #e6e6fa; padding: 20px; border-radius: 10px;">
+    <h3>What are Linear Regression Assumptions?</h3>
+    <p>Linear regression is based on several key assumptions that ensure the model's reliability and effectiveness:</p>
+    <ul>
+        <li><strong>Linearity:</strong> The relationship between variables is linear.</li>
+        <li><strong>Independence:</strong> Observations are independent of each other.</li>
+        <li><strong>Homoscedasticity:</strong> The variance of residuals is constant across all levels of the independent variables.</li>
+        <li><strong>Normality:</strong> The residuals are normally distributed.</li>
+        <li><strong>No Multicollinearity:</strong> The independent variables are not highly correlated with each other.</li>
+    </ul>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    st.markdown("""
+    <div style="background-color: #fff0f5; padding: 20px; border-radius: 10px; margin-top: 20px;">
+    <h3>Why are these Assumptions Important?</h3>
+    <ul>
+        <li><span class="highlight">Reliable Predictions:</span> Ensure that the model's predictions are accurate and trustworthy.</li>
+        <li><span class="highlight">Valid Inference:</span> Allow for valid statistical inference about the population.</li>
+        <li><span class="highlight">Model Performance:</span> Help in building a model that performs well on unseen data.</li>
+    </ul>
+    </div>
+    """, unsafe_allow_html=True)
+
+with tab2:
     st.header("📊 Data Overview")
     
     col1, col2 = st.columns([2, 1])
-    
     with col1:
         st.subheader("Generated Data")
-        st.write(data.head())
-        
+        st.write(st.session_state.data.head())
     with col2:
         st.subheader("Data Summary")
-        st.write(data.describe())
-
-with tab2:
-    st.header("📈 Linearity Test")
-    
-    st.write("""
-    The linearity test checks if there's a linear relationship between the independent variables (X) and the dependent variable (Y).
-    A clear linear trend in the scatter plot suggests a linear relationship.
-    """)
-    
-    st.plotly_chart(plot_linearity_test(data), use_container_width=True)
+        st.write(st.session_state.data.describe())
 
 with tab3:
-    st.header("🔗 Multicollinearity Test")
-    
-    st.write("""
-    Multicollinearity occurs when independent variables are highly correlated with each other.
-    We use two methods to detect multicollinearity:
-    1. Correlation Heatmap
-    2. Variance Inflation Factor (VIF)
-    """)
+    st.header("📈 Regression Assumptions")
     
     col1, col2 = st.columns(2)
-    
     with col1:
-        st.subheader("Correlation Heatmap")
-        st.plotly_chart(plot_multicollinearity_test(data[['X1', 'X2']]), use_container_width=True)
+        st.subheader("Linearity Test")
+        st.plotly_chart(plot_linearity_test(st.session_state.data), use_container_width=True)
+        st.write("A clear linear trend suggests the linearity assumption is met.")
     
     with col2:
-        st.subheader("Variance Inflation Factor (VIF)")
-        vif_data = calculate_vif(data[['X1', 'X2']])
-        st.write(vif_data)
-        st.write("VIF > 5 indicates high multicollinearity")
+        st.subheader("Heteroscedasticity Test")
+        st.plotly_chart(plot_heteroscedasticity_test(st.session_state.data), use_container_width=True)
+        st.write("Random scatter suggests homoscedasticity (constant variance).")
+    
+    col3, col4 = st.columns(2)
+    with col3:
+        st.subheader("Multicollinearity Test")
+        st.plotly_chart(plot_multicollinearity_test(st.session_state.data[['X1', 'X2']]), use_container_width=True)
+        st.write("Low correlation between independent variables is desirable.")
+    
+    with col4:
+        st.subheader("Normality of Residuals Test")
+        residuals = st.session_state.data['Y'] - LinearRegression().fit(st.session_state.data[['X1', 'X2']], st.session_state.data['Y']).predict(st.session_state.data[['X1', 'X2']])
+        st.plotly_chart(plot_normality_test(residuals), use_container_width=True)
+        st.write("Points following the diagonal line suggest normally distributed residuals.")
 
 with tab4:
-    st.header("🔄 Heteroscedasticity Test")
+    st.header("🧮 Detailed Analysis")
     
-    st.write("""
-    Heteroscedasticity occurs when the variability of a variable is unequal across the range of values of a second variable that predicts it.
-    In the plot below, a random scatter of points indicates homoscedasticity (desired), while any pattern suggests heteroscedasticity.
-    """)
+    st.subheader("Variance Inflation Factor (VIF)")
+    vif_data = calculate_vif(st.session_state.data[['X1', 'X2']])
+    st.write(vif_data)
+    st.write("VIF > 5 indicates high multicollinearity")
     
-    st.plotly_chart(plot_heteroscedasticity_test(data), use_container_width=True)
+    st.subheader("Correlation Matrix")
+    corr_matrix = st.session_state.data.corr()
+    fig = px.imshow(corr_matrix, text_auto=True, aspect="auto", title="Correlation Matrix")
+    st.plotly_chart(fig, use_container_width=True)
 
 with tab5:
-    st.header("🔔 Normality of Residuals Test")
+    st.header("Test Your Knowledge")
     
-    st.write("""
-    This test checks if the residuals (differences between observed and predicted values) are normally distributed.
-    In a Q-Q plot, points following the diagonal line suggest normally distributed residuals.
-    """)
+    questions = [
+        {
+            "question": "What does the linearity assumption in linear regression mean?",
+            "options": ["The data points form a straight line", "There's a linear relationship between variables", "The residuals are linear", "All of the above"],
+            "correct": 1,
+            "explanation": "The linearity assumption means there's a linear relationship between the independent variables and the dependent variable."
+        },
+        {
+            "question": "What does homoscedasticity mean?",
+            "options": ["The residuals are normally distributed", "The variance of residuals is constant", "The independent variables are not correlated", "The relationship is linear"],
+            "correct": 1,
+            "explanation": "Homoscedasticity means the variance of residuals is constant across all levels of the independent variables."
+        },
+        {
+            "question": "What's a sign of multicollinearity in the data?",
+            "options": ["High VIF values", "Non-linear relationships", "Heteroscedasticity", "Non-normal residuals"],
+            "correct": 0,
+            "explanation": "High Variance Inflation Factor (VIF) values indicate multicollinearity, which means the independent variables are highly correlated with each other."
+        }
+    ]
     
-    residuals = data['Y'] - LinearRegression().fit(data[['X1', 'X2']], data['Y']).predict(data[['X1', 'X2']])
-    st.plotly_chart(plot_normality_test(residuals), use_container_width=True)
+    for i, q in enumerate(questions):
+        st.subheader(f"Question {i+1}: {q['question']}")
+        user_answer = st.radio(f"Select your answer for Question {i+1}:", q['options'], key=f"q{i}")
+        
+        if st.button(f"Check Answer for Question {i+1}", key=f"check{i}"):
+            if q['options'].index(user_answer) == q['correct']:
+                st.success("Correct! Great job!")
+            else:
+                st.error("Not quite. Let's learn from this!")
+            st.info(f"Explanation: {q['explanation']}")
+        st.write("---")
 
-st.markdown("""
-## 🎓 Conclusion
-
-Congratulations on exploring various statistical tests and assumptions! Remember:
-
-- 📊 Always check these assumptions when performing regression analysis.
-- 🔍 Violations of these assumptions can lead to unreliable results.
-- 📈 Adjusting your model or data might be necessary if assumptions are violated.
-
-Keep exploring and refining your understanding of statistical analysis!
-""")
+st.sidebar.markdown("---")
+st.sidebar.info("This app demonstrates linear regression assumptions. Adjust the settings, generate new data, and explore the different tabs to learn more!")
