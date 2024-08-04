@@ -1,5 +1,6 @@
 import streamlit as st
 import plotly.graph_objects as go
+import plotly.express as px
 import pandas as pd
 import numpy as np
 from sklearn.datasets import load_iris
@@ -7,6 +8,7 @@ from sklearn.tree import DecisionTreeClassifier, plot_tree
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
 import matplotlib.pyplot as plt
+import io
 
 # Set page config
 st.set_page_config(page_title="Tree Pruning Explorer", layout="wide", initial_sidebar_state="expanded")
@@ -15,10 +17,10 @@ st.set_page_config(page_title="Tree Pruning Explorer", layout="wide", initial_si
 st.markdown("""
 <style>
 .stApp {
-    background-color: #f0f2f6;
+    background-color: #f0f8ff;
 }
 .stButton>button {
-    background-color: #4CAF50;
+    background-color: #4b0082;
     color: white;
 }
 .stTabs [data-baseweb="tab-list"] {
@@ -27,15 +29,20 @@ st.markdown("""
 .stTabs [data-baseweb="tab"] {
     height: 50px;
     white-space: pre-wrap;
-    background-color: #e6e6e6;
+    background-color: #e6e6fa;
     border-radius: 4px 4px 0 0;
     gap: 1px;
     padding-top: 10px;
     padding-bottom: 10px;
 }
 .stTabs [aria-selected="true"] {
-    background-color: #4CAF50;
+    background-color: #8a2be2;
     color: white;
+}
+.highlight {
+    background-color: #ffd700;
+    padding: 5px;
+    border-radius: 3px;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -45,9 +52,43 @@ st.title("🌳 Decision Tree Pruning Explorer")
 st.markdown("**Developed by: Venugopal Adep**")
 st.markdown("Discover the power of tree pruning in reducing overfitting and improving model generalization!")
 
+# Load the Iris dataset
+@st.cache_data
+def load_data():
+    iris = load_iris()
+    X = pd.DataFrame(iris.data, columns=iris.feature_names)
+    y = pd.Series(iris.target, name='target')
+    return X, y, iris.target_names
+
+X, y, target_names = load_data()
+
+# Split the data
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
 # Sidebar
 st.sidebar.header("Pruning Settings")
-prune_level = st.sidebar.slider("Select the pruning level:", min_value=1, max_value=10, value=3, step=1)
+prune_level = st.sidebar.slider("Select the pruning level (max depth):", min_value=1, max_value=10, value=3, step=1)
+
+# Helper functions
+def train_tree(max_depth=None):
+    clf = DecisionTreeClassifier(random_state=42, max_depth=max_depth)
+    clf.fit(X_train, y_train)
+    return clf
+
+def get_tree_metrics(clf):
+    accuracy = accuracy_score(y_test, clf.predict(X_test))
+    depth = clf.get_depth()
+    nodes = clf.get_n_leaves()
+    return accuracy, depth, nodes
+
+def plot_tree_image(clf, title):
+    fig, ax = plt.subplots(figsize=(10, 8))
+    plot_tree(clf, filled=True, feature_names=X.columns, class_names=target_names, ax=ax)
+    ax.set_title(title)
+    img = io.BytesIO()
+    plt.savefig(img, format='png')
+    img.seek(0)
+    return img
 
 # Main content
 tab1, tab2, tab3, tab4 = st.tabs(["📊 Visualization", "🧮 Solved Example", "🧠 Quiz", "📚 Learn More"])
@@ -55,88 +96,82 @@ tab1, tab2, tab3, tab4 = st.tabs(["📊 Visualization", "🧮 Solved Example", "
 with tab1:
     st.header("Tree Pruning in Action")
     
-    # Load the Iris dataset
-    iris = load_iris()
-    X = pd.DataFrame(iris.data, columns=iris.feature_names)
-    y = pd.Series(iris.target, name='target')
-    
-    # Split the data
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-    
-    # Train the original decision tree classifier
-    clf_original = DecisionTreeClassifier(random_state=42)
-    clf_original.fit(X_train, y_train)
-    
-    # Train the pruned decision tree classifier
-    clf_pruned = DecisionTreeClassifier(random_state=42, max_depth=prune_level)
-    clf_pruned.fit(X_train, y_train)
-    
     col1, col2 = st.columns(2)
     
     with col1:
         st.subheader("Original Tree")
-        fig_original, ax_original = plt.subplots(figsize=(10, 8))
-        plot_tree(clf_original, filled=True, feature_names=iris.feature_names, class_names=iris.target_names, ax=ax_original)
-        st.pyplot(fig_original)
-        
-        accuracy_original = accuracy_score(y_test, clf_original.predict(X_test))
+        clf_original = train_tree()
+        accuracy_original, depth_original, nodes_original = get_tree_metrics(clf_original)
+        st.image(plot_tree_image(clf_original, "Original Tree"))
         st.metric("Test Accuracy", f"{accuracy_original:.2f}")
-        st.metric("Tree Depth", clf_original.get_depth())
-        st.metric("Number of Nodes", clf_original.get_n_leaves())
+        st.metric("Tree Depth", depth_original)
+        st.metric("Number of Leaves", nodes_original)
     
     with col2:
         st.subheader("Pruned Tree")
-        fig_pruned, ax_pruned = plt.subplots(figsize=(10, 8))
-        plot_tree(clf_pruned, filled=True, feature_names=iris.feature_names, class_names=iris.target_names, ax=ax_pruned)
-        st.pyplot(fig_pruned)
-        
-        accuracy_pruned = accuracy_score(y_test, clf_pruned.predict(X_test))
+        clf_pruned = train_tree(max_depth=prune_level)
+        accuracy_pruned, depth_pruned, nodes_pruned = get_tree_metrics(clf_pruned)
+        st.image(plot_tree_image(clf_pruned, f"Pruned Tree (Max Depth: {prune_level})"))
         st.metric("Test Accuracy", f"{accuracy_pruned:.2f}")
-        st.metric("Tree Depth", clf_pruned.get_depth())
-        st.metric("Number of Nodes", clf_pruned.get_n_leaves())
+        st.metric("Tree Depth", depth_pruned)
+        st.metric("Number of Leaves", nodes_pruned)
 
 with tab2:
     st.header("Solved Example: Impact of Pruning")
     
     prune_levels = range(1, 11)
     accuracies = []
+    depths = []
+    nodes = []
     
     for level in prune_levels:
-        clf = DecisionTreeClassifier(random_state=42, max_depth=level)
-        clf.fit(X_train, y_train)
-        accuracies.append(accuracy_score(y_test, clf.predict(X_test)))
+        clf = train_tree(max_depth=level)
+        accuracy, depth, node_count = get_tree_metrics(clf)
+        accuracies.append(accuracy)
+        depths.append(depth)
+        nodes.append(node_count)
     
-    fig, ax = plt.subplots()
-    ax.plot(prune_levels, accuracies, marker='o')
-    ax.set_xlabel("Max Tree Depth")
-    ax.set_ylabel("Test Accuracy")
-    ax.set_title("Impact of Pruning on Test Accuracy")
-    st.pyplot(fig)
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(x=list(prune_levels), y=accuracies, mode='lines+markers', name='Accuracy'))
+    fig.update_layout(title='Impact of Pruning on Test Accuracy',
+                      xaxis_title='Max Tree Depth',
+                      yaxis_title='Test Accuracy')
+    st.plotly_chart(fig, use_container_width=True)
     
-    st.write("This example shows how the test accuracy changes as we increase the maximum depth of the tree.")
-    st.write(f"The optimal depth for this dataset appears to be around {np.argmax(accuracies) + 1}, with a test accuracy of {max(accuracies):.2f}.")
+    optimal_depth = np.argmax(accuracies) + 1
+    st.write(f"The optimal depth for this dataset appears to be around {optimal_depth}, with a test accuracy of {max(accuracies):.2f}.")
+    
+    # Additional visualizations
+    fig_metrics = go.Figure()
+    fig_metrics.add_trace(go.Bar(x=list(prune_levels), y=depths, name='Tree Depth'))
+    fig_metrics.add_trace(go.Bar(x=list(prune_levels), y=nodes, name='Number of Leaves'))
+    fig_metrics.update_layout(title='Tree Complexity vs Max Depth',
+                              xaxis_title='Max Tree Depth',
+                              yaxis_title='Count',
+                              barmode='group')
+    st.plotly_chart(fig_metrics, use_container_width=True)
 
 with tab3:
     st.header("Test Your Knowledge")
     
     questions = [
         {
-            "question": "What is the main purpose of tree pruning?",
-            "options": ["Increase model complexity", "Reduce overfitting", "Increase training time", "Decrease interpretability"],
+            "question": "What happens to the number of leaves as we increase the maximum depth of the tree?",
+            "options": ["It always decreases", "It always increases", "It stays the same", "It first increases then may plateau"],
+            "correct": 3,
+            "explanation": "As we increase the maximum depth, the number of leaves generally increases, but it may plateau once the tree has fully split the data or reached its maximum possible depth for the given dataset."
+        },
+        {
+            "question": "What is the main goal of tree pruning?",
+            "options": ["To make the tree bigger", "To make the tree smaller", "To increase accuracy on training data", "To make predictions faster"],
             "correct": 1,
-            "explanation": "Tree pruning is primarily used to reduce overfitting. By limiting the depth or complexity of the tree, we can create a model that generalizes better to unseen data, even if it might slightly decrease performance on the training data."
+            "explanation": "The main goal of tree pruning is to make the tree smaller. This helps prevent overfitting and can improve the model's performance on new, unseen data."
         },
         {
-            "question": "Which of the following is NOT a common method for tree pruning?",
-            "options": ["Reduced Error Pruning", "Cost Complexity Pruning", "Depth-based Pruning", "Random Node Elimination"],
-            "correct": 3,
-            "explanation": "Common pruning methods include Reduced Error Pruning, Cost Complexity Pruning (also known as Weakest Link Pruning), and simple depth-based pruning. Random Node Elimination is not a standard pruning technique, as pruning is typically done in a systematic way to improve the model's performance and generalization."
-        },
-        {
-            "question": "What is a potential drawback of excessive pruning?",
-            "options": ["Increased overfitting", "Decreased interpretability", "Increased model complexity", "Underfitting"],
-            "correct": 3,
-            "explanation": "While pruning helps to reduce overfitting, excessive pruning can lead to underfitting. This happens when the model becomes too simple to capture the underlying patterns in the data, resulting in poor performance on both training and test data."
+            "question": "In our example, what happened to the accuracy as we increased the maximum depth?",
+            "options": ["It only increased", "It only decreased", "It increased then decreased", "It stayed the same"],
+            "correct": 2,
+            "explanation": "In our example, the accuracy generally increased up to a certain depth, then it started to decrease. This is a common pattern, showing the trade-off between model complexity and generalization."
         }
     ]
     
@@ -146,33 +181,44 @@ with tab3:
         
         if st.button(f"Check Answer for Question {i+1}", key=f"check{i}"):
             if q['options'].index(user_answer) == q['correct']:
-                st.success("Correct!")
+                st.success("Correct! Well done!")
             else:
-                st.error("Incorrect. Try again!")
-            st.write(f"Explanation: {q['explanation']}")
+                st.error("Not quite right. Let's learn from this!")
+            st.info(f"Explanation: {q['explanation']}")
         st.write("---")
 
 with tab4:
     st.header("Learn More About Tree Pruning")
     st.markdown("""
-    Tree pruning is a technique used in decision tree algorithms to reduce the size of decision trees by removing sections of the tree that provide little power to classify instances. Pruning reduces the complexity of the final classifier, and hence improves predictive accuracy by the reduction of overfitting.
-
-    Key benefits of Tree Pruning:
-    1. **Reduces Overfitting**: By simplifying the tree, pruning helps the model generalize better to unseen data.
-    2. **Improves Interpretability**: Smaller trees are easier to understand and explain.
-    3. **Reduces Computational Complexity**: Pruned trees require less memory and are faster to use for predictions.
-
-    Common Pruning Techniques:
-    1. **Pre-pruning (Early Stopping)**: Stop growing the tree earlier, before it perfectly classifies the training set.
-    2. **Post-pruning**: Grow the full tree, then prune it back to find the subtree with the lowest test error rate.
-
-    When to use Tree Pruning:
-    - When your decision tree is overfitting the training data
-    - When you need a more interpretable model
-    - When you want to reduce the computational resources required for predictions
-
-    Remember, while pruning is generally beneficial, the optimal level of pruning can vary depending on the specific dataset and problem. It's often useful to use techniques like cross-validation to find the best pruning strategy for your particular case.
-    """)
+    <div style="background-color: #e6e6fa; padding: 20px; border-radius: 10px; margin-bottom: 20px;">
+    <h3>What is Tree Pruning?</h3>
+    <p>Tree pruning is like trimming a bush in your garden. Just as you cut back branches to help the plant grow better, 
+    we 'trim' parts of a decision tree to help it make better predictions.</p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    st.markdown("""
+    <div style="background-color: #fff0f5; padding: 20px; border-radius: 10px; margin-top: 20px;">
+    <h3>Why Do We Prune Trees?</h3>
+    <ul>
+        <li><span class="highlight">Prevent Overfitting:</span> Stop the tree from 'memorizing' the training data.</li>
+        <li><span class="highlight">Improve Generalization:</span> Help the tree make better predictions on new data.</li>
+        <li><span class="highlight">Increase Interpretability:</span> Make the tree easier for humans to understand.</li>
+    </ul>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    st.markdown("""
+    <div style="background-color: #f0fff0; padding: 20px; border-radius: 10px; margin-top: 20px;">
+    <h3>How Do We Prune?</h3>
+    <p>There are several ways to prune a tree:</p>
+    <ul>
+        <li><span class="highlight">Limit Depth:</span> Stop the tree from growing beyond a certain depth.</li>
+        <li><span class="highlight">Minimum Samples:</span> Only split a node if it has a minimum number of samples.</li>
+        <li><span class="highlight">Cost Complexity Pruning:</span> Balance the complexity of the tree with its accuracy.</li>
+    </ul>
+    </div>
+    """, unsafe_allow_html=True)
 
 st.sidebar.markdown("---")
 st.sidebar.info("This app demonstrates the effect of tree pruning on decision tree models. Adjust the pruning level and explore the different tabs to learn more!")
