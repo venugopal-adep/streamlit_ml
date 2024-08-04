@@ -7,7 +7,7 @@ from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 
 # Set page config
-st.set_page_config(page_title="Height-Weight Predictor", layout="wide", initial_sidebar_state="expanded")
+st.set_page_config(page_title="Height-Weight Predictor", layout="wide")
 
 # Custom CSS for better appearance
 st.markdown("""
@@ -79,7 +79,7 @@ if 'data' not in st.session_state or 'model' not in st.session_state:
     st.session_state['model'] = train_model(st.session_state['data'])
 
 # Main content
-tab1, tab2, tab3, tab4 = st.tabs(["📚 Learn", "📊 Model", "🔬 Explore", "🎯 Predict"])
+tab1, tab2, tab3, tab4, tab5 = st.tabs(["📚 Learn", "📊 Model", "🔬 Explore", "🎯 Predict", "🧠 Quiz"])
 
 with tab1:
     st.header("📚 Learning Center")
@@ -112,40 +112,6 @@ with tab1:
     </ul>
     </div>
     """, unsafe_allow_html=True)
-    
-    st.subheader("Quiz")
-    questions = [
-        {
-            "question": "What does the slope represent in our height-weight model?",
-            "options": ["The average weight", "How much weight changes for each inch of height", "The starting weight"],
-            "correct": 1,
-            "explanation": "The slope represents how much the weight changes for each inch increase in height."
-        },
-        {
-            "question": "What does a high R² score mean?",
-            "options": ["The model is very complex", "The model doesn't fit the data well", "The model explains a lot of the variability in the data"],
-            "correct": 2,
-            "explanation": "A high R² score indicates that the model explains a large portion of the variability in the data."
-        },
-        {
-            "question": "Why might the intercept not be meaningful in a height-weight model?",
-            "options": ["It's always meaningful", "It represents weight at zero height, which is impossible", "It's randomly generated"],
-            "correct": 1,
-            "explanation": "The intercept represents the weight at zero height, which isn't possible for humans and thus may not have a practical interpretation."
-        }
-    ]
-    
-    for i, q in enumerate(questions):
-        st.subheader(f"Question {i+1}: {q['question']}")
-        user_answer = st.radio(f"Select your answer for Question {i+1}:", q['options'], key=f"q{i}")
-        
-        if st.button(f"Check Answer for Question {i+1}", key=f"check{i}"):
-            if q['options'].index(user_answer) == q['correct']:
-                st.success("Correct! Well done!")
-            else:
-                st.error("Not quite right. Let's learn from this!")
-            st.info(f"Explanation: {q['explanation']}")
-        st.write("---")
 
 with tab2:
     st.header("📊 Linear Regression Model")
@@ -204,5 +170,48 @@ with tab4:
     </div>
     """, unsafe_allow_html=True)
 
-st.sidebar.markdown("---")
-st.sidebar.info("This app demonstrates the use of linear regression to predict weight based on height. Explore the different tabs to learn more about the model and make predictions!")
+with tab5:
+    st.header("🧠 Test Your Knowledge")
+    
+    questions = [
+        {
+            "question": "What does the slope represent in our height-weight model?",
+            "options": ["The average weight", "How much weight changes for each inch of height", "The starting weight"],
+            "correct": 1,
+            "explanation": "The slope represents how much the weight changes for each inch increase in height."
+        },
+        {
+            "question": "What does a high R² score mean?",
+            "options": ["The model is very complex", "The model doesn't fit the data well", "The model explains a lot of the variability in the data"],
+            "correct": 2,
+            "explanation": "A high R² score indicates that the model explains a large portion of the variability in the data."
+        },
+        {
+            "question": "Why might the intercept not be meaningful in a height-weight model?",
+            "options": ["It's always meaningful", "It represents weight at zero height, which is impossible", "It's randomly generated"],
+            "correct": 1,
+            "explanation": "The intercept represents the weight at zero height, which isn't possible for humans and thus may not have a practical interpretation."
+        }
+    ]
+    
+    for i, q in enumerate(questions):
+        st.subheader(f"Question {i+1}: {q['question']}")
+        user_answer = st.radio(f"Select your answer for Question {i+1}:", q['options'], key=f"q{i}")
+        
+        if st.button(f"Check Answer for Question {i+1}", key=f"check{i}"):
+            if q['options'].index(user_answer) == q['correct']:
+                st.success("Correct! Well done!")
+            else:
+                st.error("Not quite right. Let's learn from this!")
+            st.info(f"Explanation: {q['explanation']}")
+        st.write("---")
+
+st.markdown("""
+## 🎓 Conclusion
+
+Congratulations on exploring the Height-Weight Predictor! Remember:
+
+- 📏 Linear regression helps us understand relationships between variables like height and weight.
+- 🧮 The model provides insights, but always consider its limitations and the context of your data.
+- 🚀 Keep exploring, keep learning, and may your predictions always be accurate!
+""")
