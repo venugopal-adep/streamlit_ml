@@ -196,7 +196,6 @@ with tab3:
     <div style="background-color: #e0ffff; padding: 15px; border-radius: 8px; margin-top: 20px;">
     <h4>Observations:</h4>
     <ul>
-        <li>LOOCV typically provides a lower variance estimate of the model's performance.</li>
         <li>K-Fold CV might give a more realistic estimate of performance on new data.</li>
         <li>LOOCV can be computationally expensive for larger datasets.</li>
     </ul>
