@@ -2,22 +2,23 @@ import streamlit as st
 import numpy as np
 import pandas as pd
 import plotly.express as px
+import plotly.graph_objects as go
 from sklearn.linear_model import Lasso, Ridge
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error
 from sklearn.datasets import make_regression
 
 # Set page config
-st.set_page_config(page_title="Regularization Explorer", layout="wide", initial_sidebar_state="expanded")
+st.set_page_config(page_title="Regularization Techniques Explorer", layout="wide", initial_sidebar_state="expanded")
 
 # Custom CSS for better appearance
 st.markdown("""
 <style>
 .stApp {
-    background-color: #f0f2f6;
+    background-color: #f0f8ff;
 }
 .stButton>button {
-    background-color: #4CAF50;
+    background-color: #4b0082;
     color: white;
 }
 .stTabs [data-baseweb="tab-list"] {
@@ -26,15 +27,20 @@ st.markdown("""
 .stTabs [data-baseweb="tab"] {
     height: 50px;
     white-space: pre-wrap;
-    background-color: #e6e6e6;
+    background-color: #e6e6fa;
     border-radius: 4px 4px 0 0;
     gap: 1px;
     padding-top: 10px;
     padding-bottom: 10px;
 }
 .stTabs [aria-selected="true"] {
-    background-color: #4CAF50;
+    background-color: #8a2be2;
     color: white;
+}
+.highlight {
+    background-color: #ffd700;
+    padding: 5px;
+    border-radius: 3px;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -60,10 +66,14 @@ def fit_model(X_train, y_train, alpha, model_type='lasso'):
 
 def plot_coefficients(coefs, true_coefs, model_type):
     df = pd.DataFrame({
+        'Feature': [f'X{i}' for i in range(len(coefs))],
         'True Coefficients': true_coefs,
         'Estimated Coefficients': coefs
     })
-    fig = px.bar(df, barmode='group', title=f'{model_type.capitalize()} Regression Coefficients Comparison')
+    df_melted = pd.melt(df, id_vars=['Feature'], var_name='Coefficient Type', value_name='Value')
+    fig = px.bar(df_melted, x='Feature', y='Value', color='Coefficient Type', barmode='group',
+                 title=f'{model_type.capitalize()} Regression Coefficients Comparison')
+    fig.update_layout(xaxis_title='Feature', yaxis_title='Coefficient Value')
     return fig
 
 # Sidebar
@@ -77,9 +87,47 @@ if 'X' not in st.session_state:
     st.session_state['X'], st.session_state['y'], st.session_state['true_coefs'] = X, y, true_coefs
 
 # Main content
-tab1, tab2, tab3, tab4 = st.tabs(["📊 Visualization", "🧮 Solved Example", "🧠 Quiz", "📚 Learn More"])
+tab1, tab2, tab3, tab4 = st.tabs(["📚 Learn", "📊 Visualize", "🧮 Example", "🧠 Quiz"])
 
 with tab1:
+    st.header("Understanding Regularization")
+    
+    st.markdown("""
+    <div style="background-color: #e6e6fa; padding: 20px; border-radius: 10px;">
+    <h3>What is Regularization?</h3>
+    <p>Regularization is a technique used in machine learning to prevent overfitting by adding a penalty term to the loss function:</p>
+    <ul>
+        <li>It discourages learning a more complex or flexible model.</li>
+        <li>It helps the model generalize better to unseen data.</li>
+        <li>It's like adding a "cost" for complexity to your model.</li>
+    </ul>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    st.markdown("""
+    <div style="background-color: #fff0f5; padding: 20px; border-radius: 10px; margin-top: 20px;">
+    <h3>Key Concepts in Regularization</h3>
+    <h4>1. Lasso Regularization (L1)</h4>
+    <p>Adds the absolute value of the magnitude of coefficients as a penalty term to the loss function.</p>
+    <h4>2. Ridge Regularization (L2)</h4>
+    <p>Adds the squared magnitude of coefficients as a penalty term to the loss function.</p>
+    <h4>3. Alpha Parameter</h4>
+    <p>Controls the strength of regularization. Higher alpha means stronger regularization.</p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    st.markdown("""
+    <div style="background-color: #f0fff0; padding: 20px; border-radius: 10px; margin-top: 20px;">
+    <h3>Why Use Regularization?</h3>
+    <ul>
+        <li><span class="highlight">Prevent Overfitting:</span> It helps your model perform well on new, unseen data.</li>
+        <li><span class="highlight">Feature Selection:</span> Lasso can automatically select important features.</li>
+        <li><span class="highlight">Handle Multicollinearity:</span> Ridge can handle correlated features effectively.</li>
+    </ul>
+    </div>
+    """, unsafe_allow_html=True)
+
+with tab2:
     st.header("Regularization in Action")
     
     X, y, true_coefs = st.session_state['X'], st.session_state['y'], st.session_state['true_coefs']
@@ -108,9 +156,16 @@ with tab1:
     with col2:
         st.metric("Train MSE", f"{train_mse:.4f}")
     with col3:
-        st.metric("Number of non-zero coefficients", np.sum(np.abs(predicted_coefs) > 1e-5))
+        st.metric("Non-zero coefficients", np.sum(np.abs(predicted_coefs) > 1e-5))
+    
+    st.markdown("""
+    <div style="background-color: #fffacd; padding: 10px; border-radius: 5px;">
+    <p><strong>Interpretation:</strong> The bar chart compares true coefficients with estimated coefficients. 
+    Lasso tends to push some coefficients to exactly zero, while Ridge shrinks all coefficients but rarely to zero.</p>
+    </div>
+    """, unsafe_allow_html=True)
 
-with tab2:
+with tab3:
     st.header("Solved Example: Lasso vs Ridge")
     
     X_example, y_example, true_coefs_example = generate_data(n_samples=50, n_features=5, seed=42)
@@ -119,41 +174,59 @@ with tab2:
     lasso_model = fit_model(X_train, y_train, alpha=0.1, model_type='lasso')
     ridge_model = fit_model(X_train, y_train, alpha=0.1, model_type='ridge')
     
-    st.write("We'll compare Lasso and Ridge regression on a small dataset (50 samples, 5 features).")
+    st.write("Let's compare Lasso and Ridge regression on a small dataset (50 samples, 5 features).")
     
     col1, col2 = st.columns(2)
     with col1:
         st.subheader("Lasso Regression")
-        st.metric("Test MSE", f"{mean_squared_error(y_test, lasso_model.predict(X_test)):.4f}")
+        lasso_mse = mean_squared_error(y_test, lasso_model.predict(X_test))
+        st.metric("Test MSE", f"{lasso_mse:.4f}")
         st.metric("Non-zero coefficients", np.sum(np.abs(lasso_model.coef_) > 1e-5))
+        
+        fig_lasso = plot_coefficients(lasso_model.coef_, true_coefs_example, 'Lasso')
+        st.plotly_chart(fig_lasso, use_container_width=True)
+    
     with col2:
         st.subheader("Ridge Regression")
-        st.metric("Test MSE", f"{mean_squared_error(y_test, ridge_model.predict(X_test)):.4f}")
+        ridge_mse = mean_squared_error(y_test, ridge_model.predict(X_test))
+        st.metric("Test MSE", f"{ridge_mse:.4f}")
         st.metric("Non-zero coefficients", np.sum(np.abs(ridge_model.coef_) > 1e-5))
+        
+        fig_ridge = plot_coefficients(ridge_model.coef_, true_coefs_example, 'Ridge')
+        st.plotly_chart(fig_ridge, use_container_width=True)
     
-    st.write("Notice how Lasso tends to produce sparse models by setting some coefficients exactly to zero, while Ridge shrinks all coefficients but rarely sets them exactly to zero.")
+    st.markdown("""
+    <div style="background-color: #f0fff0; padding: 20px; border-radius: 10px; margin-top: 20px;">
+    <h3>Key Observations:</h3>
+    <ul>
+        <li>Lasso tends to produce sparse models by setting some coefficients exactly to zero.</li>
+        <li>Ridge shrinks all coefficients but rarely sets them exactly to zero.</li>
+        <li>The choice between Lasso and Ridge often depends on your specific dataset and problem.</li>
+    </ul>
+    </div>
+    """, unsafe_allow_html=True)
 
-with tab3:
+with tab4:
     st.header("Test Your Knowledge")
     
     questions = [
         {
-            "question": "What is the main difference between Lasso and Ridge regularization?",
-            "options": ["Lasso uses L1 penalty, Ridge uses L2 penalty", "Lasso is for classification, Ridge is for regression", "Lasso is faster, Ridge is more accurate", "Lasso uses gradient descent, Ridge uses normal equations"],
+            "question": "What does regularization help prevent in machine learning models?",
+            "options": ["Overfitting", "Underfitting", "Data collection", "Model deployment"],
             "correct": 0,
-            "explanation": "The main difference is in the penalty term: Lasso uses L1 regularization (absolute value of coefficients), which can lead to sparse models, while Ridge uses L2 regularization (squared value of coefficients), which tends to shrink coefficients towards zero but not exactly to zero."
-        },
-        {
-            "question": "What does the alpha parameter control in regularization?",
-            "options": ["The learning rate", "The number of iterations", "The strength of regularization", "The number of features"],
-            "correct": 2,
-            "explanation": "Alpha controls the strength of regularization. A higher alpha value increases the impact of the regularization term, leading to stronger shrinkage of coefficients."
+            "explanation": "Regularization helps prevent overfitting by adding a penalty for model complexity, allowing the model to generalize better to unseen data."
         },
         {
             "question": "Which regularization technique is more likely to produce a sparse model?",
             "options": ["Lasso", "Ridge", "Both equally", "Neither"],
             "correct": 0,
-            "explanation": "Lasso regularization is more likely to produce sparse models. It has the effect of forcing some of the coefficient estimates to be exactly zero when the tuning parameter alpha is sufficiently large, effectively performing feature selection."
+            "explanation": "Lasso regularization is more likely to produce sparse models by forcing some coefficients to be exactly zero, effectively performing feature selection."
+        },
+        {
+            "question": "What does a higher alpha value in regularization typically mean?",
+            "options": ["Stronger regularization", "Weaker regularization", "Faster training", "More features"],
+            "correct": 0,
+            "explanation": "A higher alpha value typically means stronger regularization, increasing the impact of the penalty term and leading to more coefficient shrinkage."
         }
     ]
     
@@ -163,34 +236,11 @@ with tab3:
         
         if st.button(f"Check Answer for Question {i+1}", key=f"check{i}"):
             if q['options'].index(user_answer) == q['correct']:
-                st.success("Correct!")
+                st.success("Correct! Great job!")
             else:
-                st.error("Incorrect. Try again!")
-            st.write(f"Explanation: {q['explanation']}")
+                st.error("Not quite. Let's learn from this!")
+            st.info(f"Explanation: {q['explanation']}")
         st.write("---")
-
-with tab4:
-    st.header("Learn More About Regularization")
-    st.markdown("""
-    Regularization is a technique used in machine learning to prevent overfitting by adding a penalty term to the loss function. It discourages learning a more complex or flexible model, so as to avoid the risk of overfitting.
-
-    Key benefits of Regularization:
-    1. **Prevents Overfitting**: Helps the model generalize better to unseen data.
-    2. **Feature Selection**: Lasso can perform automatic feature selection.
-    3. **Multicollinearity**: Ridge regression can handle multicollinearity in the data.
-
-    Types of Regularization:
-    1. **Lasso (L1)**: Adds absolute value of magnitude of coefficients as penalty term to the loss function.
-    2. **Ridge (L2)**: Adds squared magnitude of coefficients as penalty term to the loss function.
-    3. **Elastic Net**: Combines both L1 and L2 penalties.
-
-    When to use which:
-    - Use Lasso when you believe many features are irrelevant.
-    - Use Ridge when you have many small/medium sized effects.
-    - Use Elastic Net when you have many correlated features.
-
-    Remember, while regularization is a powerful technique for preventing overfitting, it's not a silver bullet. It's important to understand the nature of your data and the problem you're trying to solve when choosing and tuning regularization techniques.
-    """)
 
 st.sidebar.markdown("---")
 st.sidebar.info("This app demonstrates Lasso and Ridge regularization techniques. Adjust the settings and explore the different tabs to learn more!")
