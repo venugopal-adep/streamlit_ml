@@ -48,9 +48,8 @@ st.markdown("**Developed by: Venugopal Adep**")
 st.markdown("Explore how multiple features affect house prices using linear regression!")
 
 # Helper functions
-@st.cache_data
 def generate_data(num_samples):
-    np.random.seed(0)
+    np.random.seed(None)  # Ensure we get different data each time
     area = np.random.randint(1000, 7500, num_samples)
     rooms = np.random.randint(2, 10, num_samples)
     kitchens = np.random.randint(1, 4, num_samples)
