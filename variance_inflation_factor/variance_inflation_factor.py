@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 from statsmodels.stats.outliers_influence import variance_inflation_factor
 import plotly.graph_objects as go
+import plotly.express as px
 from sklearn.preprocessing import StandardScaler
 
 # Set page config
@@ -12,10 +13,10 @@ st.set_page_config(page_title="VIF Explorer", layout="wide", initial_sidebar_sta
 st.markdown("""
 <style>
 .stApp {
-    background-color: #f0f2f6;
+    background-color: #f0f8ff;
 }
 .stButton>button {
-    background-color: #4CAF50;
+    background-color: #4b0082;
     color: white;
 }
 .stTabs [data-baseweb="tab-list"] {
@@ -24,15 +25,21 @@ st.markdown("""
 .stTabs [data-baseweb="tab"] {
     height: 50px;
     white-space: pre-wrap;
-    background-color: #e6e6e6;
+    background-color: #e6e6fa;
     border-radius: 4px 4px 0 0;
     gap: 1px;
     padding-top: 10px;
     padding-bottom: 10px;
 }
 .stTabs [aria-selected="true"] {
-    background-color: #4CAF50;
+    background-color: #8a2be2;
     color: white;
+}
+.highlight {
+    background-color: #e6e6fa;
+    padding: 10px;
+    border-radius: 5px;
+    margin-bottom: 10px;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -43,6 +50,7 @@ st.markdown("**Developed by: Venugopal Adep**")
 st.markdown("Discover the power of VIF in detecting multicollinearity!")
 
 # Helper functions
+@st.cache_data
 def calculate_vif(X):
     scaler = StandardScaler()
     X_scaled = scaler.fit_transform(X)
@@ -51,6 +59,7 @@ def calculate_vif(X):
     vif["VIF"] = [variance_inflation_factor(X_scaled, i) for i in range(X_scaled.shape[1])]
     return vif.sort_values("VIF", ascending=False)
 
+@st.cache_data
 def generate_data(num_features, num_samples=100, seed=None):
     if seed is not None:
         np.random.seed(seed)
@@ -74,10 +83,42 @@ if 'X' not in st.session_state or st.sidebar.button('Regenerate Data'):
     st.session_state['X'] = generate_data(num_features, seed=new_seed)
 
 # Main content
-tab1, tab2, tab3, tab4 = st.tabs(["📊 Visualization", "🧮 Solved Example", "🧠 Quiz", "📚 Learn More"])
+tab1, tab2, tab3, tab4 = st.tabs(["📚 Learn", "📊 Visualization", "🧮 Example", "🧠 Quiz"])
 
 with tab1:
-    st.header("VIF Analysis")
+    st.header("📚 Learn About VIF")
+    
+    st.markdown("""
+    <div class="highlight">
+    <h3>What is Variance Inflation Factor (VIF)?</h3>
+    <p>VIF is a measure of the amount of multicollinearity in a set of multiple regression variables. It tells us how much the variance of an estimated regression coefficient increases if your predictors are correlated.</p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    st.markdown("""
+    <div class="highlight">
+    <h3>How to Interpret VIF?</h3>
+    <ul>
+        <li>VIF = 1: No correlation between the feature and other features</li>
+        <li>1 < VIF < 5: Moderate correlation</li>
+        <li>VIF > 5: High correlation (some use a threshold of 10)</li>
+    </ul>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    st.markdown("""
+    <div class="highlight">
+    <h3>Why is VIF Important?</h3>
+    <ul>
+        <li>Helps detect multicollinearity in regression analysis</li>
+        <li>Multicollinearity can lead to unstable and unreliable regression estimates</li>
+        <li>Guides feature selection and model improvement</li>
+    </ul>
+    </div>
+    """, unsafe_allow_html=True)
+
+with tab2:
+    st.header("📊 VIF Analysis")
     
     # Calculate VIF
     vif_df = calculate_vif(st.session_state['X'])
@@ -87,12 +128,8 @@ with tab1:
     st.table(vif_df)
     
     # Create interactive bar plot
-    fig = go.Figure(data=[go.Bar(x=vif_df["Feature"], y=vif_df["VIF"])])
-    fig.update_layout(
-        title="Variance Inflation Factor (VIF) Bar Plot",
-        xaxis_title="Features",
-        yaxis_title="VIF",
-    )
+    fig = px.bar(vif_df, x="Feature", y="VIF", title="Variance Inflation Factor (VIF) Bar Plot")
+    fig.update_layout(xaxis_title="Features", yaxis_title="VIF")
     st.plotly_chart(fig, use_container_width=True)
     
     # VIF interpretation
@@ -105,8 +142,14 @@ with tab1:
         else:
             st.error(f"{row['Feature']}: VIF = {row['VIF']:.2f} - High multicollinearity")
 
-with tab2:
-    st.header("Solved Example: Detecting Multicollinearity")
+    st.markdown("""
+    <div class="highlight">
+    <p>The bar plot shows the VIF for each feature. Longer bars indicate higher VIF values, suggesting stronger multicollinearity.</p>
+    </div>
+    """, unsafe_allow_html=True)
+
+with tab3:
+    st.header("🧮 Example: Detecting Multicollinearity")
     
     # Generate example data
     X_example = pd.DataFrame({
@@ -119,33 +162,38 @@ with tab2:
     
     vif_example = calculate_vif(X_example)
     
-    st.write("We'll analyze a dataset where X5 is a linear combination of X1 and X2 with some noise.")
+    st.write("Let's analyze a dataset where X5 is a linear combination of X1 and X2 with some noise.")
     
-    st.table(vif_example)
+    fig = px.bar(vif_example, x="Feature", y="VIF", title="VIF for Example Dataset")
+    st.plotly_chart(fig, use_container_width=True)
     
-    st.write("As we can see, X5 has a high VIF, indicating strong multicollinearity with other features.")
+    st.markdown("""
+    <div class="highlight">
+    <p>Notice how X5 has a much higher VIF than the other features. This indicates strong multicollinearity with other features, particularly X1 and X2.</p>
+    </div>
+    """, unsafe_allow_html=True)
 
-with tab3:
-    st.header("Test Your Knowledge")
+with tab4:
+    st.header("🧠 Test Your Knowledge")
     
     questions = [
         {
-            "question": "What does VIF measure?",
-            "options": ["Variable importance", "Variance in features", "Multicollinearity between features", "Feature selection criteria"],
-            "correct": 2,
-            "explanation": "VIF measures the extent of multicollinearity between features in a dataset. It quantifies how much the variance of an estimated regression coefficient increases if your predictors are correlated."
+            "question": "What does VIF stand for?",
+            "options": ["Very Important Factor", "Variance Inflation Factor", "Variable Influence Factor", "Value Increase Factor"],
+            "correct": 1,
+            "explanation": "VIF stands for Variance Inflation Factor. It measures how much the variance of a regression coefficient is inflated due to multicollinearity in the model."
         },
         {
-            "question": "What is generally considered a high VIF value?",
-            "options": ["Above 1", "Above 3", "Above 5", "Above 10"],
-            "correct": 3,
-            "explanation": "While there's no universal rule, a VIF above 10 is often considered to indicate high multicollinearity. Some researchers use a more conservative threshold of 5."
+            "question": "What does a VIF value of 1 indicate?",
+            "options": ["High multicollinearity", "Moderate multicollinearity", "No multicollinearity", "Perfect multicollinearity"],
+            "correct": 2,
+            "explanation": "A VIF value of 1 indicates that there is no correlation between this feature and the other features. This is the ideal scenario."
         },
         {
-            "question": "What action might you take if a feature has a very high VIF?",
-            "options": ["Always keep it in the model", "Always remove it from the model", "Consider removing it or combining it with other features", "Multiply its coefficients by the VIF"],
-            "correct": 2,
-            "explanation": "If a feature has a very high VIF, you might consider removing it from the model or combining it with other correlated features. However, the decision should also consider domain knowledge and the feature's importance to the problem."
+            "question": "Why is multicollinearity a problem in regression analysis?",
+            "options": ["It always improves model performance", "It can lead to unstable and unreliable estimates", "It always decreases model performance", "It has no effect on the model"],
+            "correct": 1,
+            "explanation": "Multicollinearity can lead to unstable and unreliable regression estimates. When predictors are highly correlated, it becomes difficult to determine the individual effect of each predictor on the response variable."
         }
     ]
     
@@ -155,30 +203,11 @@ with tab3:
         
         if st.button(f"Check Answer for Question {i+1}", key=f"check{i}"):
             if q['options'].index(user_answer) == q['correct']:
-                st.success("Correct!")
+                st.success("Correct! Well done!")
             else:
-                st.error("Incorrect. Try again!")
-            st.write(f"Explanation: {q['explanation']}")
+                st.error("Not quite right. Let's learn from this!")
+            st.info(f"Explanation: {q['explanation']}")
         st.write("---")
-
-with tab4:
-    st.header("Learn More About VIF")
-    st.markdown("""
-    The Variance Inflation Factor (VIF) is a measure of the amount of multicollinearity in a set of multiple regression variables. It provides an index that measures how much the variance of an estimated regression coefficient is increased because of collinearity.
-
-    Key concepts of VIF:
-    1. **Formula**: VIF for the i-th variable is 1 / (1 - R^2), where R^2 is from a regression of the i-th variable on all other predictors.
-    2. **Interpretation**: A VIF of 1 means no correlation between the i-th variable and the remaining variables. A VIF between 1 and 5 suggests moderate correlation, while a VIF above 5 (or 10, depending on the source) indicates high correlation.
-    3. **Usage**: VIF is commonly used in regression analysis to detect multicollinearity among predictors.
-
-    Improved VIF strategy:
-    1. **Standardization**: Always standardize your features before calculating VIF. This ensures that VIF is not affected by the scale of the variables.
-    2. **Iterative Approach**: If high VIF is detected, consider removing the variable with the highest VIF and recalculating VIF for the remaining variables.
-    3. **Domain Knowledge**: Always consider the importance of a variable in your model, even if it has a high VIF. Sometimes, it might be better to keep a theoretically important variable despite high VIF.
-    4. **Alternative Techniques**: Consider using techniques like Principal Component Analysis (PCA) or Partial Least Squares (PLS) regression if multicollinearity is a persistent issue.
-
-    Remember, while VIF is a useful tool for detecting multicollinearity, it should be used in conjunction with other diagnostic measures and domain expertise when making decisions about your regression model.
-    """)
 
 st.sidebar.markdown("---")
 st.sidebar.info("This app demonstrates the use of Variance Inflation Factor (VIF) in detecting multicollinearity. Adjust the number of features, regenerate data, and explore the different tabs to learn more!")
