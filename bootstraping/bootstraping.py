@@ -161,37 +161,75 @@ with tab2:
 with tab3:
     st.header("Solved Example: Estimating Population Mean")
     
+    # Generate population and sample
     population = np.random.normal(loc=50, scale=10, size=1000)
     single_sample = np.random.choice(population, size=50, replace=False)
+    
+    # Calculate sample mean
     sample_mean = np.mean(single_sample)
+    
+    # Perform bootstrap
     bootstrap_means = bootstrap_samples(single_sample, 1000, 50)
+    
+    # Calculate confidence interval
     ci_lower, ci_upper = np.percentile(bootstrap_means, [2.5, 97.5])
     
-    st.write(f"True Population Mean: {np.mean(population):.2f}")
-    st.write(f"Single Sample Mean: {sample_mean:.2f}")
-    st.write(f"Bootstrap 95% Confidence Interval: ({ci_lower:.2f}, {ci_upper:.2f})")
-    
-    fig, ax = plt.subplots()
-    ax.hist(bootstrap_means, bins=30, edgecolor='black')
-    ax.axvline(np.mean(population), color='r', linestyle='dashed', linewidth=2, label='True Mean')
-    ax.axvline(sample_mean, color='g', linestyle='dashed', linewidth=2, label='Sample Mean')
-    ax.axvline(ci_lower, color='b', linestyle='dotted', linewidth=2, label='95% CI')
-    ax.axvline(ci_upper, color='b', linestyle='dotted', linewidth=2)
-    ax.set_xlabel('Mean')
-    ax.set_ylabel('Frequency')
-    ax.legend()
-    st.pyplot(fig)
-    
+    # Explanatory text
     st.markdown("""
-    <div style="background-color: #e0ffff; padding: 15px; border-radius: 8px; margin-top: 20px;">
-    <h4>Observations:</h4>
-    <ul>
-        <li>The bootstrap method provides a range (confidence interval) likely to contain the true population mean.</li>
-        <li>This range accounts for the variability in our sampling process.</li>
-        <li>Even with a single sample, bootstrap gives us insight into the uncertainty of our estimate.</li>
-    </ul>
+    <div style="background-color: #e6e6fa; padding: 20px; border-radius: 10px; margin-bottom: 20px;">
+    <h3>What are we doing here?</h3>
+    <p>Imagine we're trying to guess the average height of all trees in a forest (our population). 
+    But measuring all trees is impossible, so we measure 50 random trees (our sample). 
+    We want to know how close our guess is to the real average.</p>
     </div>
     """, unsafe_allow_html=True)
+    
+    # Display calculations
+    st.subheader("Our Calculations:")
+    col1, col2 = st.columns(2)
+    with col1:
+        st.metric("True Population Mean", f"{np.mean(population):.2f}", 
+                  help="This is the actual average we're trying to estimate. In real life, we wouldn't know this.")
+        st.metric("Our Sample Mean", f"{sample_mean:.2f}", 
+                  help="This is our best guess based on the 50 trees we measured.")
+    with col2:
+        st.metric("95% Confidence Interval", f"({ci_lower:.2f}, {ci_upper:.2f})", 
+                  help="We're 95% confident the true mean falls in this range.")
+    
+    # Plotting
+    fig = go.Figure()
+    fig.add_trace(go.Histogram(x=bootstrap_means, nbinsx=30, name='Bootstrap Means'))
+    fig.add_vline(x=np.mean(population), line_dash="dash", line_color="red", annotation_text="True Mean")
+    fig.add_vline(x=sample_mean, line_dash="dash", line_color="green", annotation_text="Sample Mean")
+    fig.add_vline(x=ci_lower, line_dash="dot", line_color="blue", annotation_text="95% CI")
+    fig.add_vline(x=ci_upper, line_dash="dot", line_color="blue")
+    
+    fig.update_layout(
+        title="Distribution of Bootstrap Sample Means",
+        xaxis_title="Mean Height",
+        yaxis_title="Frequency",
+        showlegend=False
+    )
+    
+    st.plotly_chart(fig, use_container_width=True)
+    
+    # Explanation
+    st.markdown("""
+    <div style="background-color: #f0fff0; padding: 20px; border-radius: 10px; margin-top: 20px;">
+    <h3>What does this mean?</h3>
+    <ul>
+        <li>Our best guess for the average tree height is {:.2f} (our sample mean).</li>
+        <li>We're 95% confident that the true average height of all trees is between {:.2f} and {:.2f}.</li>
+        <li>The histogram shows how our guess might vary if we took different samples of 50 trees.</li>
+        <li>The closer our green line (sample mean) is to the red line (true mean), the better our guess!</li>
+    </ul>
+    <p>Bootstrap helps us understand how reliable our guess is, even when we can't measure every single tree in the forest.</p>
+    </div>
+    """.format(sample_mean, ci_lower, ci_upper), unsafe_allow_html=True)
+    
+    # Interactive element
+    if st.button("Try Another Sample"):
+        st.experimental_rerun()
 
 with tab4:
     st.header("Test Your Knowledge")
