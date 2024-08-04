@@ -14,10 +14,10 @@ st.set_page_config(page_title="Cross-Validation Explorer", layout="wide", initia
 st.markdown("""
 <style>
 .stApp {
-    background-color: #f0f2f6;
+    background-color: #f0f8ff;
 }
 .stButton>button {
-    background-color: #4CAF50;
+    background-color: #4b0082;
     color: white;
 }
 .stTabs [data-baseweb="tab-list"] {
@@ -26,15 +26,20 @@ st.markdown("""
 .stTabs [data-baseweb="tab"] {
     height: 50px;
     white-space: pre-wrap;
-    background-color: #e6e6e6;
+    background-color: #e6e6fa;
     border-radius: 4px 4px 0 0;
     gap: 1px;
     padding-top: 10px;
     padding-bottom: 10px;
 }
 .stTabs [aria-selected="true"] {
-    background-color: #4CAF50;
+    background-color: #8a2be2;
     color: white;
+}
+.highlight {
+    background-color: #ffd700;
+    padding: 5px;
+    border-radius: 3px;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -88,9 +93,56 @@ if 'X' not in st.session_state or 'y' not in st.session_state:
     st.session_state['X'], st.session_state['y'] = X, y
 
 # Main content
-tab1, tab2, tab3, tab4 = st.tabs(["📊 Visualization", "🧮 Solved Example", "🧠 Quiz", "📚 Learn More"])
+tab1, tab2, tab3, tab4 = st.tabs(["📚 Learn", "📊 Visualize", "🧮 Example", "🧠 Quiz"])
 
 with tab1:
+    st.header("Understanding Cross-Validation")
+    
+    st.markdown("""
+    <div style="background-color: #e6e6fa; padding: 20px; border-radius: 10px;">
+    <h3>What is Cross-Validation?</h3>
+    <p>Cross-validation is like a practice test for your machine learning model. Imagine you're studying for an exam:</p>
+    <ul>
+        <li>You have a set of practice questions (your data).</li>
+        <li>You want to know how well you'll do on the real test (unseen data).</li>
+        <li>Cross-validation helps you estimate this by cleverly using your practice questions.</li>
+    </ul>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    st.markdown("""
+    <div style="background-color: #fff0f5; padding: 20px; border-radius: 10px; margin-top: 20px;">
+    <h3>Types of Cross-Validation</h3>
+    <h4>1. K-Fold Cross-Validation</h4>
+    <p>Think of K-Fold CV as dividing your study material into K equal parts:</p>
+    <ul>
+        <li>You study K-1 parts and test yourself on the remaining part.</li>
+        <li>You repeat this K times, each time testing on a different part.</li>
+        <li>Your final score is the average of all K tests.</li>
+    </ul>
+    <h4>2. Leave-One-Out Cross-Validation (LOOCV)</h4>
+    <p>LOOCV is like having a personal tutor who tests you on each question individually:</p>
+    <ul>
+        <li>You study all questions except one.</li>
+        <li>You test yourself on that single question.</li>
+        <li>You repeat this for every question.</li>
+        <li>Your final score is the average of all these mini-tests.</li>
+    </ul>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    st.markdown("""
+    <div style="background-color: #f0fff0; padding: 20px; border-radius: 10px; margin-top: 20px;">
+    <h3>Why Use Cross-Validation?</h3>
+    <ul>
+        <li><span class="highlight">Reliable Performance Estimation:</span> It gives you a more accurate idea of how well your model will perform on new, unseen data.</li>
+        <li><span class="highlight">Overfitting Detection:</span> It helps you spot if your model is memorizing the data instead of learning general patterns.</li>
+        <li><span class="highlight">Model Selection:</span> It aids in choosing the best model among different options.</li>
+    </ul>
+    </div>
+    """, unsafe_allow_html=True)
+
+with tab2:
     st.header("Cross-Validation in Action")
     
     X, y = st.session_state['X'], st.session_state['y']
@@ -103,18 +155,26 @@ with tab1:
     # Visualizing the MSE scores
     fig = px.bar(x=[f'Fold {i+1}' for i in range(len(mse_scores))], y=mse_scores, labels={'x': '', 'y': 'MSE'},
                  title=f"Mean Squared Error Across Each {cv_type}")
+    fig.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)')
+    fig.update_traces(marker_color='#8a2be2')
     st.plotly_chart(fig, use_container_width=True)
     
     # Display statistics
     col1, col2, col3 = st.columns(3)
     with col1:
-        st.metric("Mean MSE", f"{np.mean(mse_scores):.4f}")
+        st.metric("Mean MSE", f"{np.mean(mse_scores):.4f}", delta=f"{np.mean(mse_scores)-np.median(mse_scores):.4f}")
     with col2:
         st.metric("Std Dev of MSE", f"{np.std(mse_scores):.4f}")
     with col3:
         st.metric("Number of Folds", len(mse_scores))
+    
+    st.markdown("""
+    <div style="background-color: #fffacd; padding: 10px; border-radius: 5px;">
+    <p><strong>Interpretation:</strong> Lower MSE values indicate better model performance. The standard deviation shows how consistent the model's performance is across different folds.</p>
+    </div>
+    """, unsafe_allow_html=True)
 
-with tab2:
+with tab3:
     st.header("Solved Example: Comparing K-Fold and LOOCV")
     
     X_example, y_example = generate_data(n_samples=50, seed=42)
@@ -122,7 +182,7 @@ with tab2:
     k_fold_scores = perform_k_fold_cv(X_example, y_example, n_splits=5)
     loocv_scores = perform_loocv(X_example, y_example)
     
-    st.write("We'll compare 5-Fold CV and LOOCV on a small dataset (50 samples).")
+    st.write("Let's compare 5-Fold CV and LOOCV on a small dataset (50 samples).")
     
     col1, col2 = st.columns(2)
     with col1:
@@ -132,9 +192,18 @@ with tab2:
         st.metric("LOOCV Mean MSE", f"{np.mean(loocv_scores):.4f}")
         st.metric("LOOCV Std Dev of MSE", f"{np.std(loocv_scores):.4f}")
     
-    st.write("As we can see, LOOCV typically provides a lower variance estimate of the model's performance, but it can be computationally expensive for larger datasets.")
+    st.markdown("""
+    <div style="background-color: #e0ffff; padding: 15px; border-radius: 8px; margin-top: 20px;">
+    <h4>Observations:</h4>
+    <ul>
+        <li>LOOCV typically provides a lower variance estimate of the model's performance.</li>
+        <li>K-Fold CV might give a more realistic estimate of performance on new data.</li>
+        <li>LOOCV can be computationally expensive for larger datasets.</li>
+    </ul>
+    </div>
+    """, unsafe_allow_html=True)
 
-with tab3:
+with tab4:
     st.header("Test Your Knowledge")
     
     questions = [
@@ -142,19 +211,19 @@ with tab3:
             "question": "What is the main purpose of cross-validation?",
             "options": ["To increase model complexity", "To assess model performance on unseen data", "To speed up model training", "To reduce the need for test data"],
             "correct": 1,
-            "explanation": "Cross-validation is primarily used to assess how well a model will generalize to an independent dataset. It helps in understanding the model's performance on unseen data and detecting issues like overfitting."
+            "explanation": "Cross-validation helps us estimate how well our model will perform on new, unseen data. It's like a practice test for our machine learning model."
         },
         {
             "question": "In K-Fold cross-validation, what does K represent?",
             "options": ["The number of features", "The number of samples", "The number of splits in the data", "The number of iterations"],
             "correct": 2,
-            "explanation": "In K-Fold cross-validation, K represents the number of groups that a given data sample is to be split into. For example, if K=5, the data is split into 5 folds, each used once as a validation set while the other K-1 folds form the training set."
+            "explanation": "K represents the number of groups (folds) that we split our data into. If K=5, we divide our data into 5 parts, using 4 for training and 1 for testing, repeating this process 5 times."
         },
         {
             "question": "What is a potential drawback of Leave-One-Out Cross-Validation (LOOCV)?",
             "options": ["It's not accurate", "It can be computationally expensive", "It always leads to overfitting", "It can't be used with large datasets"],
             "correct": 1,
-            "explanation": "While LOOCV provides a nearly unbiased estimate of the model's performance, it can be computationally expensive, especially for large datasets. This is because it requires fitting the model n times, where n is the number of samples in the dataset."
+            "explanation": "While LOOCV can provide a detailed assessment, it requires fitting the model as many times as there are samples in the dataset. This can be very time-consuming for large datasets."
         }
     ]
     
@@ -164,34 +233,11 @@ with tab3:
         
         if st.button(f"Check Answer for Question {i+1}", key=f"check{i}"):
             if q['options'].index(user_answer) == q['correct']:
-                st.success("Correct!")
+                st.success("Correct! Well done!")
             else:
-                st.error("Incorrect. Try again!")
-            st.write(f"Explanation: {q['explanation']}")
+                st.error("Incorrect. Let's review this concept.")
+            st.info(f"Explanation: {q['explanation']}")
         st.write("---")
-
-with tab4:
-    st.header("Learn More About Cross-Validation")
-    st.markdown("""
-    Cross-validation is a resampling procedure used to evaluate machine learning models on a limited data sample. It's primarily used in applied machine learning to estimate the skill of a model on unseen data.
-
-    Key benefits of Cross-Validation:
-    1. **Model Evaluation**: Helps in assessing how the results of a statistical analysis will generalize to an independent data set.
-    2. **Overfitting Detection**: Helps in detecting overfitting, i.e., when a model performs well on training data but poorly on unseen data.
-    3. **Model Selection**: Aids in selecting the best model among different options.
-
-    Common Cross-Validation Techniques:
-    1. **K-Fold CV**: The data is divided into k subsets, and the holdout method is repeated k times.
-    2. **Leave-One-Out CV (LOOCV)**: A special case of k-fold CV where k equals the number of instances in the data.
-    3. **Stratified K-Fold CV**: Ensures that the proportion of samples for each class is roughly the same in each fold.
-
-    When to use Cross-Validation:
-    - When you have a limited dataset and can't afford a large separate test set
-    - When you want to tune hyperparameters of your model
-    - When you need to select the best model among several candidates
-
-    Remember, while cross-validation is a powerful technique, it's not a silver bullet. It's important to understand its assumptions and limitations when applying it to real-world problems.
-    """)
 
 st.sidebar.markdown("---")
 st.sidebar.info("This app demonstrates different cross-validation techniques. Adjust the settings and explore the different tabs to learn more!")
