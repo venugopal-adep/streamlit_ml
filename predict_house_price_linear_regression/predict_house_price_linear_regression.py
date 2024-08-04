@@ -5,54 +5,49 @@ from sklearn.linear_model import LinearRegression
 import plotly.express as px
 import plotly.graph_objects as go
 
-# Set page configuration
-st.set_page_config(page_title="House Price Predictor", layout="wide")
+# Set page config
+st.set_page_config(page_title="House Price Predictor: Multiple Regression Explorer", layout="wide", initial_sidebar_state="expanded")
 
-# Custom CSS for visual appeal
+# Custom CSS for better appearance
 st.markdown("""
 <style>
-    .main {
-        background-color: #f0f8ff;
-    }
-    .stButton>button {
-        background-color: #4CAF50;
-        color: white;
-        font-weight: bold;
-        border-radius: 20px;
-        padding: 10px 20px;
-        transition: all 0.3s;
-    }
-    .stButton>button:hover {
-        background-color: #45a049;
-        transform: scale(1.05);
-    }
-    .stTextInput>div>div>input {
-        background-color: #e0e0e0;
-    }
-    h1, h2, h3 {
-        color: #2c3e50;
-        font-family: 'Arial', sans-serif;
-    }
-    .stTab {
-        background-color: #f1f8ff;
-        padding: 20px;
-        border-radius: 10px;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-    }
+.stApp {
+    background-color: #f0f8ff;
+}
+.stButton>button {
+    background-color: #4b0082;
+    color: white;
+}
+.stTabs [data-baseweb="tab-list"] {
+    gap: 2px;
+}
+.stTabs [data-baseweb="tab"] {
+    height: 50px;
+    white-space: pre-wrap;
+    background-color: #e6e6fa;
+    border-radius: 4px 4px 0 0;
+    gap: 1px;
+    padding-top: 10px;
+    padding-bottom: 10px;
+}
+.stTabs [aria-selected="true"] {
+    background-color: #8a2be2;
+    color: white;
+}
+.highlight {
+    background-color: #ffd700;
+    padding: 5px;
+    border-radius: 3px;
+}
 </style>
 """, unsafe_allow_html=True)
 
-# Title and introduction
+# Title and description
 st.title("🏠 House Price Predictor: Multiple Regression Explorer")
 st.markdown("**Developed by: Venugopal Adep**")
+st.markdown("Explore how multiple features affect house prices using linear regression!")
 
-st.markdown("""
-Welcome to the House Price Predictor! Explore how different features like area, number of rooms,
-and kitchens affect house prices using multiple linear regression. Interact with the model,
-make predictions, and visualize the results in 3D!
-""")
-
-# Functions
+# Helper functions
 @st.cache_data
 def generate_data(num_samples):
     np.random.seed(0)
@@ -91,21 +86,56 @@ def create_3d_plot(data, input_area, input_rooms, input_kitchens, predicted_pric
                       ))
     return fig
 
+# Sidebar
+st.sidebar.header("Data Generation")
+if st.sidebar.button("🔄 Generate New Data"):
+    st.session_state.data = generate_data(300)
+    st.session_state.model = train_model(st.session_state.data)
+    st.sidebar.success("New data generated and model retrained!")
+
 # Initialize session state
 if 'data' not in st.session_state:
     st.session_state.data = generate_data(300)
     st.session_state.model = train_model(st.session_state.data)
 
-# Main content using tabs
-tab1, tab2, tab3, tab4 = st.tabs(["🔬 Explore", "📊 Model", "🎯 Predict", "📚 Learn"])
+# Main content
+tab1, tab2, tab3, tab4 = st.tabs(["📚 Learn", "🔬 Explore", "📊 Model", "🎯 Predict"])
 
 with tab1:
-    st.header("🔬 Data Explorer")
+    st.header("Understanding Multiple Linear Regression")
     
-    if st.button("🔄 Generate New Data"):
-        st.session_state.data = generate_data(300)
-        st.session_state.model = train_model(st.session_state.data)
-        st.success("New data generated and model retrained!")
+    st.markdown("""
+    <div style="background-color: #e6e6fa; padding: 20px; border-radius: 10px;">
+    <h3>What is Multiple Linear Regression?</h3>
+    <p>Multiple linear regression is a statistical method that uses several explanatory variables to predict the outcome of a response variable. The goal is to model the linear relationship between the explanatory (independent) variables and the response (dependent) variable.</p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    st.markdown("""
+    <div style="background-color: #fff0f5; padding: 20px; border-radius: 10px; margin-top: 20px;">
+    <h3>Key Concepts</h3>
+    <ul>
+        <li><strong>Multiple Predictors:</strong> Unlike simple linear regression, multiple regression can handle several independent variables.</li>
+        <li><strong>Coefficients:</strong> Each predictor has its own coefficient, representing its individual effect on the outcome.</li>
+        <li><strong>Interpretation:</strong> The coefficient for each variable represents the change in the outcome for a one-unit change in that variable, holding all other variables constant.</li>
+        <li><strong>Model Complexity:</strong> While more predictors can lead to better fit, it also increases the risk of overfitting.</li>
+    </ul>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    st.markdown("""
+    <div style="background-color: #f0fff0; padding: 20px; border-radius: 10px; margin-top: 20px;">
+    <h3>Why Use Multiple Linear Regression?</h3>
+    <ul>
+        <li><span class="highlight">Improved Predictions:</span> By considering multiple factors, we can often make more accurate predictions.</li>
+        <li><span class="highlight">Understanding Relationships:</span> It helps us understand how different factors interact to influence the outcome.</li>
+        <li><span class="highlight">Real-world Applicability:</span> Many real-world phenomena are influenced by multiple factors, making this a versatile technique.</li>
+    </ul>
+    </div>
+    """, unsafe_allow_html=True)
+
+with tab2:
+    st.header("🔬 Data Explorer")
     
     st.subheader("Sample Data")
     st.write(st.session_state.data.head())
@@ -117,7 +147,7 @@ with tab1:
     fig_corr = px.imshow(st.session_state.data.corr(), text_auto=True, aspect="auto")
     st.plotly_chart(fig_corr, use_container_width=True)
 
-with tab2:
+with tab3:
     st.header("📊 Model Details")
     
     coefficients = st.session_state.model.coef_
@@ -134,7 +164,7 @@ with tab2:
     - When all features are 0, the expected price is ${intercept:.2f} (this is the y-intercept).
     """)
 
-with tab3:
+with tab4:
     st.header("🎯 Price Predictor")
     
     col1, col2, col3 = st.columns(3)
@@ -153,64 +183,41 @@ with tab3:
     fig_3d = create_3d_plot(st.session_state.data, input_area, input_rooms, input_kitchens, predicted_price)
     st.plotly_chart(fig_3d, use_container_width=True)
 
-with tab4:
-    st.header("📚 Learning Center")
-    
-    st.subheader("Understanding Multiple Linear Regression")
-    st.write("""
-    Multiple linear regression is an extension of simple linear regression used to predict an outcome variable (y) based on multiple distinct predictor variables (x). Here's what you need to know:
-    
-    1. **Multiple Predictors**: Unlike simple linear regression, multiple regression can handle several independent variables.
-    2. **Coefficients**: Each predictor has its own coefficient, representing its individual effect on the outcome.
-    3. **Interpretation**: The coefficient for each variable represents the change in the outcome for a one-unit change in that variable, holding all other variables constant.
-    4. **Model Complexity**: While more predictors can lead to better fit, it also increases the risk of overfitting.
-    """)
-    
-    st.subheader("Quiz")
-    questions = [
-        {
-            "question": "In our model, which feature seems to have the largest impact on house price?",
-            "options": ["Area", "Number of Rooms", "Number of Kitchens"],
-            "answer": 1,
-            "explanation": "Based on the coefficients in our model, the number of rooms has the largest impact on price. Each additional room increases the price by about $25,000, which is more significant than the impact of area or kitchens."
-        },
-        {
-            "question": "What does the intercept represent in this context?",
-            "options": ["The minimum house price", "The price of a house with no area, rooms, or kitchens", "The average house price"],
-            "answer": 1,
-            "explanation": "The intercept represents the theoretical price of a house with 0 area, 0 rooms, and 0 kitchens. In real-world scenarios, this often doesn't have a practical interpretation, as we never observe houses with zero of all features."
-        },
-        {
-            "question": "Why might we use multiple regression instead of simple regression for house price prediction?",
-            "options": ["It's always more accurate", "It allows us to consider multiple factors that influence price", "It's easier to interpret"],
-            "answer": 1,
-            "explanation": "Multiple regression allows us to consider multiple factors that influence house prices simultaneously. This can lead to more accurate predictions as real-world housing prices are influenced by many factors, not just a single variable."
-        }
-    ]
-    
-    for i, q in enumerate(questions):
-        st.subheader(f"Question {i+1}")
-        st.write(q["question"])
-        user_answer = st.radio(f"Select your answer for question {i+1}:", q['options'], key=f"q{i}")
-        
-        if st.button(f"Check Answer for Question {i+1}", key=f"check{i}"):
-            if q['options'].index(user_answer) == q['answer']:
-                st.success("Correct! 🎉")
-            else:
-                st.error(f"Not quite. The correct answer is: {q['options'][q['answer']]}")
-            
-            st.markdown("**Explanation:**")
-            st.write(q['explanation'])
-            st.markdown("---")
+# Quiz
+st.header("Test Your Knowledge")
 
-st.markdown("""
-## 🎓 Conclusion
+questions = [
+    {
+        "question": "What does multiple linear regression allow us to do?",
+        "options": ["Predict based on one variable", "Predict based on multiple variables", "Only work with categorical data"],
+        "correct": 1,
+        "explanation": "Multiple linear regression allows us to predict an outcome based on multiple variables, which can lead to more accurate predictions in complex scenarios."
+    },
+    {
+        "question": "In our house price model, what does a coefficient represent?",
+        "options": ["The total price of the house", "The change in price for a one-unit change in a feature", "The number of features"],
+        "correct": 1,
+        "explanation": "A coefficient in our model represents the change in house price for a one-unit change in the corresponding feature, holding all other features constant."
+    },
+    {
+        "question": "Why might adding more features to a regression model not always improve it?",
+        "options": ["It always improves the model", "It can lead to overfitting", "It makes the model slower"],
+        "correct": 1,
+        "explanation": "While adding more features can improve a model's fit to the training data, it can also lead to overfitting, where the model performs poorly on new, unseen data."
+    }
+]
 
-Congratulations on exploring the House Price Predictor! Remember:
+for i, q in enumerate(questions):
+    st.subheader(f"Question {i+1}: {q['question']}")
+    user_answer = st.radio(f"Select your answer for Question {i+1}:", q['options'], key=f"q{i}")
+    
+    if st.button(f"Check Answer for Question {i+1}", key=f"check{i}"):
+        if q['options'].index(user_answer) == q['correct']:
+            st.success("Correct! Great job!")
+        else:
+            st.error("Not quite. Let's learn from this!")
+        st.info(f"Explanation: {q['explanation']}")
+    st.write("---")
 
-- 📊 Multiple linear regression allows us to consider various factors affecting house prices.
-- 🧮 Each coefficient represents the impact of a specific feature on the price.
-- 🚀 While powerful, always consider the limitations and assumptions of your model.
-
-Keep exploring and happy predicting!
-""")
+st.sidebar.markdown("---")
+st.sidebar.info("This app demonstrates multiple linear regression for house price prediction. Generate new data, explore the model, and make predictions!")
