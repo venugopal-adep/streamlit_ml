@@ -1,5 +1,6 @@
 import streamlit as st
 import plotly.express as px
+import plotly.graph_objects as go
 import pandas as pd
 import numpy as np
 from sklearn.datasets import load_iris, load_wine, load_breast_cancer
@@ -14,10 +15,10 @@ st.set_page_config(page_title="Train-Test Split Explorer", layout="wide", initia
 st.markdown("""
 <style>
 .stApp {
-    background-color: #f0f2f6;
+    background-color: #f0f8ff;
 }
 .stButton>button {
-    background-color: #4CAF50;
+    background-color: #4b0082;
     color: white;
 }
 .stTabs [data-baseweb="tab-list"] {
@@ -26,15 +27,20 @@ st.markdown("""
 .stTabs [data-baseweb="tab"] {
     height: 50px;
     white-space: pre-wrap;
-    background-color: #e6e6e6;
+    background-color: #e6e6fa;
     border-radius: 4px 4px 0 0;
     gap: 1px;
     padding-top: 10px;
     padding-bottom: 10px;
 }
 .stTabs [aria-selected="true"] {
-    background-color: #4CAF50;
+    background-color: #8a2be2;
     color: white;
+}
+.highlight {
+    background-color: #ffd700;
+    padding: 5px;
+    border-radius: 3px;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -62,6 +68,26 @@ def train_and_evaluate_model(X_train, X_test, y_train, y_test):
     precision = precision_score(y_test, y_pred, average='macro')
     return model, y_pred, accuracy, recall, precision
 
+def plot_3d_split(df_combined, feature_names):
+    colors = {'Train': 'red', 'Test': 'green'}
+    fig = px.scatter_3d(df_combined, x=feature_names[0], y=feature_names[1], z=feature_names[2], color='type', 
+                        color_discrete_map=colors, title='Train-Test Split 3D Visualization')
+    fig.update_layout(margin=dict(l=0, r=0, b=0, t=30), height=600)
+    return fig
+
+def plot_feature_importance(feature_names, feature_importance):
+    feature_importance_df = pd.DataFrame({'feature': feature_names, 'importance': feature_importance})
+    feature_importance_df = feature_importance_df.sort_values('importance', ascending=False)
+    fig = px.bar(feature_importance_df, x='feature', y='importance', title='Feature Importance')
+    return fig
+
+def plot_confusion_matrix(cm, class_names):
+    cm_df = pd.DataFrame(cm, index=class_names, columns=class_names)
+    fig = px.imshow(cm_df, text_auto=True, labels=dict(x="Predicted Label", y="True Label", color="Count"), 
+                    color_continuous_scale=px.colors.sequential.Viridis)
+    fig.update_layout(title="Confusion Matrix")
+    return fig
+
 # Sidebar
 st.sidebar.header("Configuration")
 dataset_name = st.sidebar.selectbox('Select Dataset', ['Iris', 'Wine', 'Breast Cancer'])
@@ -75,18 +101,55 @@ feature_names = data['feature_names']
 class_names = data['target_names']
 
 # Split the data
-if resample_data:
+if resample_data or 'X_train' not in st.session_state:
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=None)
+    st.session_state.X_train, st.session_state.X_test = X_train, X_test
+    st.session_state.y_train, st.session_state.y_test = y_train, y_test
 else:
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=42)
+    X_train, X_test = st.session_state.X_train, st.session_state.X_test
+    y_train, y_test = st.session_state.y_train, st.session_state.y_test
 
 # Train and evaluate model
 model, y_pred, accuracy, recall, precision = train_and_evaluate_model(X_train, X_test, y_train, y_test)
 
 # Main content
-tab1, tab2, tab3, tab4 = st.tabs(["📊 Data Visualization", "📈 Model Performance", "🧠 Confusion Matrix", "📚 Learn More"])
+tab1, tab2, tab3, tab4, tab5 = st.tabs(["📚 Learn", "📊 Data Visualization", "📈 Model Performance", "🧠 Confusion Matrix", "🧠 Quiz"])
 
 with tab1:
+    st.header("Understanding Train-Test Split")
+    
+    st.markdown("""
+    <div style="background-color: #e6e6fa; padding: 20px; border-radius: 10px;">
+    <h3>What is Train-Test Split?</h3>
+    <p>Train-test split is a technique used in machine learning to evaluate the performance of a model on unseen data. It involves dividing the dataset into two subsets: one for training the model and another for testing its performance.</p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    st.markdown("""
+    <div style="background-color: #fff0f5; padding: 20px; border-radius: 10px; margin-top: 20px;">
+    <h3>Key Concepts</h3>
+    <ul>
+        <li><strong>Training Set:</strong> The subset of data used to train the model.</li>
+        <li><strong>Test Set:</strong> The subset of data used to evaluate the model's performance.</li>
+        <li><strong>Split Ratio:</strong> The proportion of data allocated to training and testing (e.g., 80-20 or 70-30).</li>
+        <li><strong>Randomization:</strong> Ensures both sets are representative of the overall dataset.</li>
+        <li><strong>Stratification:</strong> Preserves the class distribution in both sets for classification problems.</li>
+    </ul>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    st.markdown("""
+    <div style="background-color: #f0fff0; padding: 20px; border-radius: 10px; margin-top: 20px;">
+    <h3>Why Use Train-Test Split?</h3>
+    <ul>
+        <li><span class="highlight">Model Evaluation:</span> Assess how well the model generalizes to new, unseen data.</li>
+        <li><span class="highlight">Prevent Overfitting:</span> Helps detect if the model is memorizing the training data instead of learning general patterns.</li>
+        <li><span class="highlight">Performance Estimation:</span> Provides a more realistic estimate of the model's performance on new data.</li>
+    </ul>
+    </div>
+    """, unsafe_allow_html=True)
+
+with tab2:
     st.header("Train-Test Split Visualization")
     
     df_train = pd.DataFrame(X_train, columns=feature_names)
@@ -95,13 +158,10 @@ with tab1:
     df_test['type'] = 'Test'
     df_combined = pd.concat([df_train, df_test])
     
-    colors = {'Train': 'red', 'Test': 'green'}
-    fig = px.scatter_3d(df_combined, x=feature_names[0], y=feature_names[1], z=feature_names[2], color='type', 
-                        color_discrete_map=colors, title='Train-Test Split 3D Visualization')
-    fig.update_layout(margin=dict(l=0, r=0, b=0, t=30), height=600)
+    fig = plot_3d_split(df_combined, feature_names)
     st.plotly_chart(fig, use_container_width=True)
 
-with tab2:
+with tab3:
     st.header("Model Performance")
     
     col1, col2, col3 = st.columns(3)
@@ -115,44 +175,52 @@ with tab2:
     # Feature importance (for KNN, we'll use a simple metric based on the nearest neighbors)
     distances, indices = model.kneighbors(X_test)
     feature_importance = np.mean(np.abs(X_test[:, None, :] - X_train[indices]), axis=(0, 1))
-    feature_importance_df = pd.DataFrame({'feature': feature_names, 'importance': feature_importance})
-    feature_importance_df = feature_importance_df.sort_values('importance', ascending=False)
     
-    fig_importance = px.bar(feature_importance_df, x='feature', y='importance', title='Feature Importance')
+    fig_importance = plot_feature_importance(feature_names, feature_importance)
     st.plotly_chart(fig_importance, use_container_width=True)
 
-with tab3:
+with tab4:
     st.header("Confusion Matrix")
     
     cm = confusion_matrix(y_test, y_pred)
-    cm_df = pd.DataFrame(cm, index=class_names, columns=class_names)
-    fig_cm = px.imshow(cm_df, text_auto=True, labels=dict(x="Predicted Label", y="True Label", color="Count"), 
-                       color_continuous_scale=px.colors.sequential.Viridis)
-    fig_cm.update_layout(title="Confusion Matrix")
+    fig_cm = plot_confusion_matrix(cm, class_names)
     st.plotly_chart(fig_cm, use_container_width=True)
 
-with tab4:
-    st.header("Learn More About Train-Test Split")
-    st.markdown("""
-    The train-test split is a technique used in machine learning to evaluate the performance of a model on unseen data. Here are some key points:
+with tab5:
+    st.header("Test Your Knowledge")
 
-    1. **Purpose**: It helps assess how well a model generalizes to new, unseen data.
-    2. **Process**: The dataset is divided into two subsets:
-        - Training set: Used to train the model
-        - Test set: Used to evaluate the model's performance
-    3. **Typical split ratio**: Common ratios include 80-20 or 70-30 (train-test).
-    4. **Randomization**: Data is usually randomly split to ensure both sets are representative of the overall dataset.
-    5. **Stratification**: For classification problems, stratified sampling ensures that the class distribution is preserved in both sets.
-    6. **Trade-offs**: 
-        - Larger training set: More data for the model to learn from, but less data for testing.
-        - Larger test set: More reliable performance estimates, but less data for training.
-    7. **Limitations**: 
-        - Doesn't work well with small datasets
-        - May not capture temporal aspects in time-series data
-    8. **Alternatives**: Cross-validation, especially for smaller datasets.
+    questions = [
+        {
+            "question": "What is the main purpose of train-test split?",
+            "options": ["To increase the dataset size", "To evaluate model performance on unseen data", "To speed up model training"],
+            "correct": 1,
+            "explanation": "The main purpose of train-test split is to evaluate how well a model performs on unseen data, helping to assess its generalization capability."
+        },
+        {
+            "question": "What does a larger test set typically provide?",
+            "options": ["Faster model training", "More reliable performance estimates", "Better model accuracy"],
+            "correct": 1,
+            "explanation": "A larger test set typically provides more reliable performance estimates, as it gives a better representation of how the model might perform on new, unseen data."
+        },
+        {
+            "question": "What is stratification in train-test split?",
+            "options": ["Splitting data randomly", "Preserving class distribution in both sets", "Increasing the dataset size"],
+            "correct": 1,
+            "explanation": "Stratification in train-test split ensures that the class distribution (proportion of samples for each class) is approximately the same in both the training and test sets."
+        }
+    ]
 
-    Remember, the goal is to create a model that performs well on unseen data, not just memorize the training data!
-    """)
+    for i, q in enumerate(questions):
+        st.subheader(f"Question {i+1}: {q['question']}")
+        user_answer = st.radio(f"Select your answer for Question {i+1}:", q['options'], key=f"q{i}")
+        
+        if st.button(f"Check Answer for Question {i+1}", key=f"check{i}"):
+            if q['options'].index(user_answer) == q['correct']:
+                st.success("Correct! Great job!")
+            else:
+                st.error("Not quite. Let's learn from this!")
+            st.info(f"Explanation: {q['explanation']}")
+        st.write("---")
 
 st.sidebar.markdown("---")
 st.sidebar.info("This app demonstrates the impact of train-test split on model performance. Adjust the test size, resample the data, and explore the different tabs to learn more!")
