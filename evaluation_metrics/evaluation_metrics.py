@@ -2,58 +2,75 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import plotly.express as px
-import plotly.graph_objects as go
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 
 # Set page config
-st.set_page_config(page_title="Regression Metrics Explorer", layout="wide", initial_sidebar_state="expanded")
+st.set_page_config(page_title="Regression Model Explorer", layout="wide")
 
 # Custom CSS for better appearance
 st.markdown("""
 <style>
 .stApp {
-    background-color: #f0f8ff;
+    background-color: #f5f7ff;
 }
-.stButton>button {
-    background-color: #4b0082;
+.metric-card {
+    background-color: #ffffff;
+    border-radius: 10px;
+    padding: 15px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    margin-bottom: 20px;
+}
+.formula-box {
+    background-color: #f0f0f8;
+    border-left: 5px solid #6c5ce7;
+    padding: 10px;
+    border-radius: 0 5px 5px 0;
+    margin: 10px 0;
+}
+.metric-table {
+    width: 100%;
+    text-align: left;
+    border-collapse: collapse;
+}
+.metric-table th, .metric-table td {
+    padding: 12px 15px;
+    border-bottom: 1px solid #e0e0e0;
+}
+.metric-table th {
+    background-color: #6c5ce7;
     color: white;
 }
-.stTabs [data-baseweb="tab-list"] {
-    gap: 2px;
+.metric-table tr:nth-child(even) {
+    background-color: #f8f9ff;
 }
-.stTabs [data-baseweb="tab"] {
-    height: 50px;
-    white-space: pre-wrap;
-    background-color: #e6e6fa;
-    border-radius: 4px 4px 0 0;
-    gap: 1px;
-    padding-top: 10px;
-    padding-bottom: 10px;
-}
-.stTabs [aria-selected="true"] {
-    background-color: #8a2be2;
-    color: white;
-}
-.highlight {
-    background-color: #ffd700;
-    padding: 5px;
-    border-radius: 3px;
+.interpretation {
+    background-color: #e7f5fe;
+    border-radius: 5px;
+    padding: 10px;
+    margin-top: 10px;
 }
 </style>
 """, unsafe_allow_html=True)
 
 # Title and description
-st.title("📊 Regression Metrics Explorer")
-st.markdown("**Developed by: Venugopal Adep**")
-st.markdown("Discover the key metrics used to evaluate regression models!")
+st.title("📊 Regression Model Explorer")
+st.markdown("**Developed by: Venugopal Adep | Enhanced Version**")
+st.markdown("Visualize your regression model and understand key performance metrics")
 
 # Helper functions
 @st.cache_data
-def generate_data(n, noise_level):
+def generate_data(n, noise_level, relationship_type='linear'):
     np.random.seed(42)
     X = np.linspace(0, 10, n)
-    Y = 2 * X + 3 + np.random.normal(0, noise_level, n)
+    
+    if relationship_type == 'linear':
+        Y = 2 * X + 3 + np.random.normal(0, noise_level, n)
+    elif relationship_type == 'quadratic':
+        Y = 0.5 * X**2 - X + 5 + np.random.normal(0, noise_level, n)
+    elif relationship_type == 'exponential':
+        Y = 2 * np.exp(0.3 * X) + np.random.normal(0, noise_level, n)
+    
     return pd.DataFrame({'X': X, 'Y': Y})
 
 def fit_and_evaluate(data):
@@ -63,177 +80,169 @@ def fit_and_evaluate(data):
     model.fit(X, Y)
     Y_pred = model.predict(X)
     
+    # Calculate metrics
     r2 = r2_score(Y, Y_pred)
     mae = mean_absolute_error(Y, Y_pred)
-    rmse = np.sqrt(mean_squared_error(Y, Y_pred))
+    mse = mean_squared_error(Y, Y_pred)
+    rmse = np.sqrt(mse)
     adj_r2 = 1 - (1-r2) * (len(Y)-1) / (len(Y)-X.shape[1]-1)
     
-    return Y_pred, r2, adj_r2, mae, rmse, model
+    # Calculate residuals
+    residuals = Y - Y_pred
+    
+    return Y_pred, r2, adj_r2, mae, mse, rmse, model, residuals
 
 def plot_regression(data, Y_pred):
     fig = px.scatter(data, x='X', y='Y', title="Linear Regression Fit")
-    fig.add_scatter(x=data['X'], y=Y_pred, mode='lines', name='Regression Line')
-    fig.update_layout(template="plotly_white")
+    fig.add_scatter(x=data['X'], y=Y_pred, mode='lines', name='Regression Line', 
+                   line=dict(color='#6c5ce7', width=3))
+    fig.update_layout(
+        template="plotly_white",
+        plot_bgcolor='rgba(240, 240, 248, 0.6)',
+        xaxis_title="X Variable",
+        yaxis_title="Y Variable",
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=1.02,
+            xanchor="right",
+            x=1
+        )
+    )
     return fig
 
-def plot_metrics_vs_noise(noise_range, metrics_df):
-    fig = px.line(metrics_df, x='Noise', y=['R-squared', 'Adjusted R-squared', 'MAE'],
-                  title="Impact of Noise on Metrics")
-    fig.update_layout(template="plotly_white")
+def plot_residuals(data, residuals):
+    residual_df = pd.DataFrame({'X': data['X'], 'Residuals': residuals})
+    fig = px.scatter(residual_df, x='X', y='Residuals', title="Residual Plot")
+    fig.add_hline(y=0, line_dash="dash", line_color="#ff6b6b")
+    fig.update_layout(
+        template="plotly_white",
+        plot_bgcolor='rgba(240, 240, 248, 0.6)',
+        xaxis_title="X Variable",
+        yaxis_title="Residuals (Actual - Predicted)"
+    )
     return fig
 
 # Sidebar
 st.sidebar.header("Data Configuration")
 n_points = st.sidebar.slider('Number of Data Points', min_value=50, max_value=500, value=100, step=50)
 noise_level = st.sidebar.slider('Noise Level', min_value=0.1, max_value=10.0, value=1.0, step=0.1)
+relationship = st.sidebar.selectbox('Relationship Type', 
+                                   ['linear', 'quadratic', 'exponential'], 
+                                   index=0)
 
 # Generate data
 if 'data' not in st.session_state or st.sidebar.button("Generate New Data"):
-    st.session_state.data = generate_data(n_points, noise_level)
-    st.session_state.Y_pred, st.session_state.r2, st.session_state.adj_r2, st.session_state.mae, st.session_state.rmse, st.session_state.model = fit_and_evaluate(st.session_state.data)
+    st.session_state.data = generate_data(n_points, noise_level, relationship)
+    st.session_state.Y_pred, st.session_state.r2, st.session_state.adj_r2, st.session_state.mae, st.session_state.mse, st.session_state.rmse, st.session_state.model, st.session_state.residuals = fit_and_evaluate(st.session_state.data)
 
 # Main content
-tab1, tab2, tab3, tab4 = st.tabs(["📚 Learn", "📊 Model", "📈 Metrics", "🧠 Quiz"])
+st.header("📊 Model Visualization and Metrics")
 
-with tab1:
-    st.header("Understanding Regression Metrics")
-    
-    st.markdown("""
-    <div style="background-color: #e6e6fa; padding: 20px; border-radius: 10px;">
-    <h3>What are Regression Metrics?</h3>
-    <p>Regression metrics are statistical measures used to evaluate the performance of a regression model. They help us understand how well the model fits the data and makes predictions. Key metrics include:</p>
-    <ul>
-        <li><strong>R-squared (R²):</strong> Measures the proportion of variance in the dependent variable explained by the independent variables.</li>
-        <li><strong>Adjusted R-squared:</strong> A modified version of R² that adjusts for the number of predictors in the model.</li>
-        <li><strong>Mean Absolute Error (MAE):</strong> The average of the absolute differences between predictions and actual values.</li>
-        <li><strong>Root Mean Square Error (RMSE):</strong> The square root of the average of squared differences between predictions and actual values.</li>
-    </ul>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    st.markdown("""
-    <div style="background-color: #fff0f5; padding: 20px; border-radius: 10px; margin-top: 20px;">
-    <h3>Why are these Metrics Important?</h3>
-    <ul>
-        <li><span class="highlight">Model Comparison:</span> Help in comparing different models to choose the best one.</li>
-        <li><span class="highlight">Performance Evaluation:</span> Provide insights into how well the model is performing.</li>
-        <li><span class="highlight">Error Understanding:</span> Give different perspectives on the types of errors in the model's predictions.</li>
-    </ul>
-    </div>
-    """, unsafe_allow_html=True)
+col1, col2 = st.columns([3, 2])
 
-with tab2:
-    st.header("📊 Model Overview")
+with col1:
+    # Regression plot
+    fig = plot_regression(st.session_state.data, st.session_state.Y_pred)
+    st.plotly_chart(fig, use_container_width=True)
     
-    col1, col2 = st.columns([2, 1])
-    
-    with col1:
-        fig = plot_regression(st.session_state.data, st.session_state.Y_pred)
-        st.plotly_chart(fig, use_container_width=True)
-    
-    with col2:
-        st.subheader("Regression Equation")
-        st.latex(f"Y = {st.session_state.model.coef_[0]:.2f}X + {st.session_state.model.intercept_:.2f}")
-        
-        st.subheader("Model Metrics")
-        st.metric("R-squared", f"{st.session_state.r2:.4f}")
-        st.metric("Adjusted R-squared", f"{st.session_state.adj_r2:.4f}")
-        st.metric("MAE", f"{st.session_state.mae:.4f}")
-        st.metric("RMSE", f"{st.session_state.rmse:.4f}")
-    
-    with st.expander("View Data"):
-        st.write(st.session_state.data)
+    # Residual plot
+    fig_residuals = plot_residuals(st.session_state.data, st.session_state.residuals)
+    st.plotly_chart(fig_residuals, use_container_width=True)
 
-with tab3:
-    st.header("📈 Metrics Interpretation")
+with col2:
+    st.markdown("<div class='metric-card'>", unsafe_allow_html=True)
+    st.subheader("Regression Equation")
+    st.latex(f"Y = {st.session_state.model.coef_[0]:.4f}X + {st.session_state.model.intercept_:.4f}")
     
-    st.subheader("R-squared (R²)")
-    st.write(f"""
-    Current value: {st.session_state.r2:.4f}
+    if relationship != 'linear':
+        st.info(f"Note: You're fitting a linear model to {relationship} data. This might not be the best fit.")
+    st.markdown("</div>", unsafe_allow_html=True)
     
-    R-squared represents the proportion of the variance in the dependent variable that is predictable from the independent variable(s).
+    st.markdown("<div class='metric-card'>", unsafe_allow_html=True)
+    st.subheader("Regression Metrics Formulas")
     
-    In this case, {st.session_state.r2:.2%} of the variance in Y can be explained by X.
-    """)
+    st.markdown("<div class='formula-box'>", unsafe_allow_html=True)
+    st.markdown("**R-squared (R²):**")
+    st.latex(r"R^2 = 1 - \frac{\sum(y_i - \hat{y}_i)^2}{\sum(y_i - \bar{y})^2}")
+    st.markdown("</div>", unsafe_allow_html=True)
     
-    st.subheader("Adjusted R-squared")
-    st.write(f"""
-    Current value: {st.session_state.adj_r2:.4f}
+    st.markdown("<div class='formula-box'>", unsafe_allow_html=True)
+    st.markdown("**Adjusted R-squared:**")
+    st.latex(r"Adj\ R^2 = 1 - \frac{(1-R^2)(n-1)}{n-p-1}")
+    st.markdown("where n = number of samples, p = number of predictors")
+    st.markdown("</div>", unsafe_allow_html=True)
     
-    Adjusted R-squared modifies R-squared by accounting for the number of predictors in the model. It's useful when comparing models with different numbers of predictors.
-    """)
+    st.markdown("<div class='formula-box'>", unsafe_allow_html=True)
+    st.markdown("**Mean Absolute Error (MAE):**")
+    st.latex(r"MAE = \frac{1}{n}\sum_{i=1}^{n}|y_i - \hat{y}_i|")
+    st.markdown("</div>", unsafe_allow_html=True)
     
-    st.subheader("Mean Absolute Error (MAE)")
-    st.write(f"""
-    Current value: {st.session_state.mae:.4f}
+    st.markdown("<div class='formula-box'>", unsafe_allow_html=True)
+    st.markdown("**Mean Squared Error (MSE):**")
+    st.latex(r"MSE = \frac{1}{n}\sum_{i=1}^{n}(y_i - \hat{y}_i)^2")
+    st.markdown("</div>", unsafe_allow_html=True)
     
-    MAE represents the average magnitude of the errors in a set of predictions, without considering their direction.
-    On average, our predictions are off by {st.session_state.mae:.2f} units.
-    """)
-    
-    st.subheader("Root Mean Square Error (RMSE)")
-    st.write(f"""
-    Current value: {st.session_state.rmse:.4f}
-    
-    RMSE is the square root of the average of squared differences between prediction and actual observation.
-    It gives a relatively high weight to large errors.
-    """)
-    
-    st.subheader("Impact of Noise on Metrics")
-    noise_range = np.linspace(0.1, 10, 100)
-    metrics = [fit_and_evaluate(generate_data(100, noise))[:4] for noise in noise_range]
-    metrics_df = pd.DataFrame({
-        'Noise': noise_range,
-        'R-squared': [m[1] for m in metrics],
-        'Adjusted R-squared': [m[2] for m in metrics],
-        'MAE': [m[3] for m in metrics]
-    })
-    
-    fig_metrics = plot_metrics_vs_noise(noise_range, metrics_df)
-    st.plotly_chart(fig_metrics, use_container_width=True)
-    
-    st.write("""
-    This plot shows how different levels of noise in the data affect our regression metrics.
-    As noise increases:
-    - R-squared and Adjusted R-squared decrease, indicating a poorer fit.
-    - MAE increases, showing larger average prediction errors.
-    """)
+    st.markdown("<div class='formula-box'>", unsafe_allow_html=True)
+    st.markdown("**Root Mean Squared Error (RMSE):**")
+    st.latex(r"RMSE = \sqrt{MSE} = \sqrt{\frac{1}{n}\sum_{i=1}^{n}(y_i - \hat{y}_i)^2}")
+    st.markdown("</div>", unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
 
-with tab4:
-    st.header("Test Your Knowledge")
-    
-    questions = [
-        {
-            "question": "What does R-squared measure?",
-            "options": ["The proportion of variance explained by the model", "The average error of the model", "The slope of the regression line", "The number of predictors in the model"],
-            "correct": 0,
-            "explanation": "R-squared measures the proportion of variance in the dependent variable that is predictable from the independent variable(s)."
-        },
-        {
-            "question": "Which metric is not affected by the scale of the data?",
-            "options": ["MAE", "RMSE", "R-squared", "All of the above"],
-            "correct": 2,
-            "explanation": "R-squared is not affected by the scale of the data because it represents a proportion of explained variance."
-        },
-        {
-            "question": "What happens to the regression metrics as noise in the data increases?",
-            "options": ["R-squared increases", "MAE decreases", "RMSE decreases", "R-squared decreases"],
-            "correct": 3,
-            "explanation": "As noise in the data increases, R-squared typically decreases because the model's ability to explain the variance in the data decreases."
-        }
+# Metrics table
+st.markdown("<div class='metric-card'>", unsafe_allow_html=True)
+st.subheader("Model Performance Metrics")
+
+metrics_data = {
+    "Metric": ["R-squared (R²)", "Adjusted R-squared", "Mean Absolute Error (MAE)", 
+               "Mean Squared Error (MSE)", "Root Mean Squared Error (RMSE)"],
+    "Value": [f"{st.session_state.r2:.4f}", f"{st.session_state.adj_r2:.4f}", 
+              f"{st.session_state.mae:.4f}", f"{st.session_state.mse:.4f}", 
+              f"{st.session_state.rmse:.4f}"],
+    "Interpretation": [
+        f"{st.session_state.r2:.2%} of the variance in Y is explained by X. Higher is better (max 1.0).",
+        f"Adjusts R² for the number of predictors. Useful for comparing models with different numbers of features.",
+        f"On average, predictions are off by {st.session_state.mae:.4f} units. Lower is better.",
+        f"Average of squared errors. Penalizes larger errors more than MAE. Lower is better.",
+        f"Square root of MSE. In the same units as the dependent variable. Lower is better."
     ]
+}
+
+metrics_df = pd.DataFrame(metrics_data)
+st.markdown(
+    metrics_df.style.set_properties(**{'text-align': 'left'})
+    .set_table_styles([
+        {'selector': 'th', 'props': [('background-color', '#6c5ce7'), ('color', 'white')]},
+        {'selector': 'tr:nth-child(even)', 'props': [('background-color', '#f8f9ff')]},
+    ])
+    .to_html(), unsafe_allow_html=True
+)
+st.markdown("</div>", unsafe_allow_html=True)
+
+
+# Data viewer
+with st.expander("View Data"):
+    st.write("Data with Predictions and Metrics")
+    prediction_df = st.session_state.data.copy()
+    prediction_df['Predicted_Y'] = st.session_state.Y_pred
+    prediction_df['Residuals'] = prediction_df['Y'] - prediction_df['Predicted_Y']
+    prediction_df['Squared_Error'] = prediction_df['Residuals']**2
+    prediction_df['Absolute_Error'] = np.abs(prediction_df['Residuals'])
     
-    for i, q in enumerate(questions):
-        st.subheader(f"Question {i+1}: {q['question']}")
-        user_answer = st.radio(f"Select your answer for Question {i+1}:", q['options'], key=f"q{i}")
-        
-        if st.button(f"Check Answer for Question {i+1}", key=f"check{i}"):
-            if q['options'].index(user_answer) == q['correct']:
-                st.success("Correct! Great job!")
-            else:
-                st.error("Not quite. Let's learn from this!")
-            st.info(f"Explanation: {q['explanation']}")
-        st.write("---")
+    # Set a wider display for better visibility
+    st.dataframe(prediction_df, width=1000, height=400)
+    
+    # Summary statistics
+    st.write("Summary Statistics")
+    summary_stats = {
+        "Mean Absolute Error (MAE)": prediction_df['Absolute_Error'].mean(),
+        "Mean Squared Error (MSE)": prediction_df['Squared_Error'].mean(),
+        "Root Mean Squared Error (RMSE)": np.sqrt(prediction_df['Squared_Error'].mean()),
+        "R-squared (R²)": st.session_state.r2,
+        "Adjusted R-squared": st.session_state.adj_r2
+    }
+    st.dataframe(pd.DataFrame([summary_stats]), width=1000)
+
 
 st.sidebar.markdown("---")
-st.sidebar.info("This app demonstrates regression metrics. Adjust the settings, generate new data, and explore the different tabs to learn more!")
+st.sidebar.info("This app demonstrates regression model metrics. Adjust the settings and generate new data to see how different data characteristics affect model performance.")
