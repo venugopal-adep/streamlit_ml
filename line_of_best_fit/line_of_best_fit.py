@@ -1,218 +1,468 @@
-import streamlit as st
-import pandas as pd
+import pygame
 import numpy as np
-import plotly.express as px
-import plotly.graph_objects as go
-from sklearn.linear_model import LinearRegression
-from sklearn.metrics import mean_squared_error, r2_score
-import time
+import random
+import math
+from pygame.locals import *
 
-# Set page config
-st.set_page_config(page_title="Tip Predictor: Best Fit Line Explorer", layout="wide", initial_sidebar_state="expanded")
+# Initialize Pygame
+pygame.init()
+pygame.font.init()
 
-# Custom CSS for better appearance
-st.markdown("""
-<style>
-.stApp {
-    background-color: #f0f8ff;
-}
-.stButton>button {
-    background-color: #4b0082;
-    color: white;
-}
-.stTabs [data-baseweb="tab-list"] {
-    gap: 2px;
-}
-.stTabs [data-baseweb="tab"] {
-    height: 50px;
-    white-space: pre-wrap;
-    background-color: #e6e6fa;
-    border-radius: 4px 4px 0 0;
-    gap: 1px;
-    padding-top: 10px;
-    padding-bottom: 10px;
-}
-.stTabs [aria-selected="true"] {
-    background-color: #8a2be2;
-    color: white;
-}
-.highlight {
-    background-color: #ffd700;
-    padding: 5px;
-    border-radius: 3px;
-}
-</style>
-""", unsafe_allow_html=True)
+# Set up the display (increased size)
+width, height = 1600, 900
+screen = pygame.display.set_mode((width, height))
+pygame.display.set_caption("Developed by : Venugopal Adep")
 
-# Title and description
-st.title("💰 Tip Predictor: Best Fit Line Explorer")
-st.markdown("**Developed by: Venugopal Adep**")
-st.markdown("Explore the relationship between total bill amounts and tips using linear regression!")
+# Colors
+WHITE = (255, 255, 255)
+BLACK = (0, 0, 0)
+RED = (255, 0, 0)
+BLUE = (0, 0, 255)
+GREEN = (0, 128, 0)
+GRAY = (200, 200, 200)
+DARK_GRAY = (100, 100, 100)
+LIGHT_BLUE = (173, 216, 230)
+ORANGE = (255, 165, 0)
+YELLOW = (255, 255, 0)
 
-# Helper functions
-def generate_data():
-    np.random.seed(int(time.time()))  # Use current time as seed for randomness
-    total_bill = np.random.normal(20, 8, 100)
-    tips = total_bill * 0.2 + np.random.normal(2, 1, 100)
-    return pd.DataFrame({'total_bill': total_bill, 'tips': tips})
+# Fonts
+font = pygame.font.SysFont('Arial', 18)
+title_font = pygame.font.SysFont('Arial', 32, bold=True)
+axis_font = pygame.font.SysFont('Arial', 16)
 
-def train_and_predict(data):
-    model = LinearRegression()
-    model.fit(data[['total_bill']], data['tips'])
-    predictions = model.predict(data[['total_bill']])
-    return predictions, model
+# Graph area (leaving space for axes and labels)
+margin_left = 80
+margin_right = 220
+margin_top = 80
+margin_bottom = 150
+graph_width = width - margin_left - margin_right
+graph_height = height - margin_top - margin_bottom
 
-def plot_data(data, predictions, show_best_fit):
-    fig = px.scatter(data, x='total_bill', y='tips', opacity=0.65, title='Tip Prediction vs. Total Bill')
-    if show_best_fit:
-        fig.add_scatter(x=data['total_bill'], y=predictions, mode='lines', name='Best Fit Line', line=dict(color='blue'))
-    fig.update_layout(template="plotly_white", xaxis_title="Total Bill ($)", yaxis_title="Tip Amount ($)")
-    return fig
+# Function to convert graph coordinates to screen coordinates
+def graph_to_screen(x, y):
+    screen_x = margin_left + x
+    screen_y = margin_top + y
+    return screen_x, screen_y
 
-def plot_residuals(y_true, y_pred):
-    residuals = y_true - y_pred
-    fig = px.scatter(x=y_pred, y=residuals, labels={'x': 'Predicted Tips', 'y': 'Residuals'})
-    fig.add_hline(y=0, line_dash="dash", line_color="red")
-    fig.update_layout(title="Residual Plot", template="plotly_white", xaxis_title="Predicted Tips ($)", yaxis_title="Residuals ($)")
-    return fig
+# Function to convert screen coordinates to graph coordinates
+def screen_to_graph(screen_x, screen_y):
+    x = screen_x - margin_left
+    y = screen_y - margin_top
+    return x, y
 
-# Sidebar
-st.sidebar.header("Data Generation")
-if st.sidebar.button("🔄 Generate New Data"):
-    st.session_state.data = generate_data()
-    st.session_state.predictions, st.session_state.model = train_and_predict(st.session_state.data)
-    st.sidebar.success("New data generated and model retrained!")
-
-# Initialize session state
-if 'data' not in st.session_state:
-    st.session_state.data = generate_data()
-    st.session_state.predictions, st.session_state.model = train_and_predict(st.session_state.data)
-if 'show_best_fit' not in st.session_state:
-    st.session_state.show_best_fit = True
-
-# Main content
-tab1, tab2, tab3, tab4, tab5 = st.tabs(["📚 Learn", "🔬 Explore", "📊 Model", "📈 Metrics", "🧠 Quiz"])
-
-with tab1:
-    st.header("Understanding Linear Regression")
+# Generate initial random data points with more linear pattern
+def generate_linear_points(num_points, noise_level=0.3):
+    # Generate x values spread across graph area
+    x_values = np.linspace(50, graph_width-50, num_points)
     
-    st.markdown("""
-    <div style="background-color: #e6e6fa; padding: 20px; border-radius: 10px;">
-    <h3>What is Linear Regression?</h3>
-    <p>Linear regression is a statistical method used to model the relationship between two variables by fitting a linear equation to observed data. It helps us understand and predict how one variable changes with respect to another.</p>
-    </div>
-    """, unsafe_allow_html=True)
+    # Add some randomness to x positions
+    x_values = np.array([x + random.uniform(-30, 30) for x in x_values])
     
-    st.markdown("""
-    <div style="background-color: #fff0f5; padding: 20px; border-radius: 10px; margin-top: 20px;">
-    <h3>Key Concepts</h3>
-    <ul>
-        <li><strong>Best Fit Line:</strong> The line that minimizes the sum of squared differences between observed and predicted values.</li>
-        <li><strong>Slope:</strong> Represents the change in the dependent variable (tips) for a one-unit change in the independent variable (total bill).</li>
-        <li><strong>Intercept:</strong> The expected value of tips when the total bill is zero (often not meaningful in real-world contexts).</li>
-        <li><strong>R² Score:</strong> Measures the proportion of variance in the dependent variable that is predictable from the independent variable.</li>
-    </ul>
-    </div>
-    """, unsafe_allow_html=True)
+    # Generate y values with linear relationship and some noise
+    slope = random.uniform(0.3, 1.5) * (-1 if random.random() > 0.5 else 1)
+    intercept = random.uniform(graph_height * 0.3, graph_height * 0.7)
     
-    st.markdown("""
-    <div style="background-color: #f0fff0; padding: 20px; border-radius: 10px; margin-top: 20px;">
-    <h3>Why Use Linear Regression?</h3>
-    <ul>
-        <li><span class="highlight">Prediction:</span> Estimate unknown values of one variable based on another.</li>
-        <li><span class="highlight">Relationship Understanding:</span> Quantify how variables are related to each other.</li>
-        <li><span class="highlight">Trend Analysis:</span> Identify and extrapolate trends in data.</li>
-    </ul>
-    </div>
-    """, unsafe_allow_html=True)
+    y_values = np.array([
+        (slope * x) + intercept + random.uniform(-noise_level * graph_height, noise_level * graph_height)
+        for x in x_values
+    ])
+    
+    # Ensure points stay within graph area
+    y_values = np.clip(y_values, 20, graph_height - 20)
+    
+    return x_values, y_values
 
-with tab2:
-    st.header("🔬 Data Explorer")
-    
-    st.session_state.show_best_fit = st.checkbox("Show Best Fit Line", value=st.session_state.show_best_fit)
-    
-    fig = plot_data(st.session_state.data, st.session_state.predictions, st.session_state.show_best_fit)
-    st.plotly_chart(fig, use_container_width=True)
-    
-    if st.checkbox("Show Raw Data"):
-        st.write(st.session_state.data)
+# Generate initial data
+num_points = 20
+x, y = generate_linear_points(num_points)
 
-with tab3:
-    st.header("📊 Model Details")
+# Function to calculate line of best fit using least squares method
+def best_fit_line(x, y):
+    if len(x) < 2:  # Need at least 2 points
+        return 0, graph_height // 2
     
-    slope, intercept = st.session_state.model.coef_[0], st.session_state.model.intercept_
+    n = len(x)
+    x_mean = np.mean(x)
+    y_mean = np.mean(y)
     
-    st.subheader("Regression Equation")
-    st.latex(f"\\text{{Tips}} = ({slope:.2f}) \\times \\text{{Total Bill}} + ({intercept:.2f})")
+    # Calculate slope (m) using covariance and variance
+    numerator = sum((x[i] - x_mean) * (y[i] - y_mean) for i in range(n))
+    denominator = sum((x[i] - x_mean) ** 2 for i in range(n))
     
-    st.subheader("Interpretation")
-    st.write(f"""
-    - For every $1 increase in the total bill, the tip is expected to increase by ${slope:.2f}.
-    - When the total bill is $0, the expected tip is ${intercept:.2f} (this is the y-intercept).
-    """)
+    # Avoid division by zero
+    if denominator == 0:
+        m = 0
+    else:
+        m = numerator / denominator
     
-    st.subheader("Prediction Example")
-    example_bill = st.slider("Select a total bill amount", 0.0, 100.0, 50.0, 0.1)
-    predicted_tip = slope * example_bill + intercept
-    st.write(f"For a total bill of ${example_bill:.2f}, the predicted tip is ${predicted_tip:.2f}")
+    # Calculate y-intercept (b)
+    b = y_mean - m * x_mean
+    
+    return m, b
 
-with tab4:
-    st.header("📈 Model Metrics")
+# Function to calculate R-squared value
+def calculate_r_squared(x, y, m, b):
+    if len(x) < 2:
+        return 0
     
-    y_true = st.session_state.data['tips']
-    y_pred = st.session_state.predictions
+    # Calculate predicted y values
+    y_pred = m * x + b
     
-    mse = mean_squared_error(y_true, y_pred)
-    r2 = r2_score(y_true, y_pred)
+    # Calculate total sum of squares (TSS)
+    y_mean = np.mean(y)
+    tss = sum((y_i - y_mean) ** 2 for y_i in y)
     
-    col1, col2 = st.columns(2)
-    col1.metric("Mean Squared Error", f"{mse:.2f}")
-    col2.metric("R² Score", f"{r2:.2f}")
+    # Calculate residual sum of squares (RSS)
+    rss = sum((y[i] - y_pred[i]) ** 2 for i in range(len(y)))
     
-    st.subheader("Residual Plot")
-    fig_residuals = plot_residuals(y_true, y_pred)
-    st.plotly_chart(fig_residuals, use_container_width=True)
-    
-    st.write("""
-    The residual plot helps us check for patterns in prediction errors. Ideally, residuals should be randomly scattered around zero. 
-    Any visible patterns might indicate that a linear model is not appropriate or that there are other factors influencing the relationship.
-    """)
+    # Calculate R-squared
+    if tss == 0:
+        return 0
+    return 1 - (rss / tss)
 
-with tab5:
-    st.header("🧠 Test Your Knowledge")
+# Function to calculate mean squared error
+def calculate_mse(x, y, m, b):
+    if len(x) == 0:
+        return 0
+    y_pred = m * x + b
+    return np.mean((y - y_pred) ** 2)
 
-    questions = [
-        {
-            "question": "What does the slope in our model represent?",
-            "options": ["The average tip amount", "How much the tip changes for each dollar increase in the bill", "The total bill amount"],
-            "correct": 1,
-            "explanation": "The slope represents how much the tip is expected to change for each dollar increase in the total bill."
-        },
-        {
-            "question": "What does a higher R² score indicate?",
-            "options": ["A weaker relationship between variables", "A stronger relationship between variables", "No relationship between variables"],
-            "correct": 1,
-            "explanation": "A higher R² score indicates a stronger relationship between the variables, meaning the model explains more of the variability in the data."
-        },
-        {
-            "question": "What's the purpose of the best fit line?",
-            "options": ["To connect all data points", "To minimize the overall prediction error", "To make the graph look better"],
-            "correct": 1,
-            "explanation": "The best fit line is chosen to minimize the overall prediction error, providing the best linear approximation of the relationship between variables."
-        }
-    ]
+# Animation variables
+current_m, current_b = 0, graph_height // 2
+target_m, target_b = best_fit_line(x, y)
+animation_speed = 0.05
 
-    for i, q in enumerate(questions):
-        st.subheader(f"Question {i+1}: {q['question']}")
-        user_answer = st.radio(f"Select your answer for Question {i+1}:", q['options'], key=f"q{i}")
+# Interactive mode variables
+interactive_mode = False
+dragging_point = None
+adding_point = False
+removing_point = False
+show_residuals = True  # Default show residuals
+show_grid = True
+show_stats = True
+custom_line_mode = False
+custom_m, custom_b = 0, graph_height // 2
+
+# Button dimensions
+button_width, button_height = 180, 40
+button_x = width - button_width - 20
+button_spacing = 50
+
+# Define buttons (add the new "Clear Points" button)
+buttons = [
+    {"text": "Reset Points", "y": 20, "action": "reset"},
+    {"text": "Clear Points", "y": 70, "action": "clear"},  # New clear button
+    {"text": "Toggle Grid", "y": 120, "action": "grid"},
+    {"text": "Toggle Residuals", "y": 170, "action": "residuals"},
+    {"text": "Toggle Stats", "y": 220, "action": "stats"},
+    {"text": "Custom Line Mode", "y": 270, "action": "custom_line", "toggle": True},
+    {"text": "Add Points Mode", "y": 320, "action": "add_points", "toggle": True},
+    {"text": "Remove Points Mode", "y": 370, "action": "remove_points", "toggle": True}
+]
+
+# Grid parameters
+grid_spacing = 100
+
+# Main game loop
+running = True
+clock = pygame.time.Clock()
+
+while running:
+    # Handle events
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False
         
-        if st.button(f"Check Answer for Question {i+1}", key=f"check{i}"):
-            if q['options'].index(user_answer) == q['correct']:
-                st.success("Correct! Great job!")
-            else:
-                st.error("Not quite. Let's learn from this!")
-            st.info(f"Explanation: {q['explanation']}")
-        st.write("---")
+        # Mouse button down event
+        elif event.type == pygame.MOUSEBUTTONDOWN:
+            mouse_pos = pygame.mouse.get_pos()
+            
+            # Check if clicked on buttons
+            button_clicked = False
+            for button in buttons:
+                button_rect = pygame.Rect(button_x, button["y"], button_width, button_height)
+                if button_rect.collidepoint(mouse_pos):
+                    button_clicked = True
+                    action = button["action"]
+                    
+                    if action == "reset":
+                        x, y = generate_linear_points(num_points)
+                        target_m, target_b = best_fit_line(x, y)
+                    elif action == "clear":
+                        x, y = np.array([]), np.array([])  # Clear all points
+                        target_m, target_b = 0, graph_height // 2  # Reset line
+                    elif action == "grid":
+                        show_grid = not show_grid
+                    elif action == "residuals":
+                        show_residuals = not show_residuals
+                    elif action == "stats":
+                        show_stats = not show_stats
+                    elif action == "custom_line":
+                        custom_line_mode = not custom_line_mode
+                        if custom_line_mode:
+                            # Disable other modes
+                            adding_point = False
+                            removing_point = False
+                            # Set custom line to current position
+                            custom_m, custom_b = current_m, current_b
+                    elif action == "add_points":
+                        adding_point = not adding_point
+                        if adding_point:
+                            # Disable other modes
+                            removing_point = False
+                            custom_line_mode = False
+                    elif action == "remove_points":
+                        removing_point = not removing_point
+                        if removing_point:
+                            # Disable other modes
+                            adding_point = False
+                            custom_line_mode = False
+            
+            if button_clicked:
+                continue
+            
+            # Convert screen coordinates to graph coordinates
+            graph_x, graph_y = screen_to_graph(mouse_pos[0], mouse_pos[1])
+            
+            # Check if click is within the graph area
+            if (0 <= graph_x <= graph_width and 0 <= graph_y <= graph_height):
+                # Check if clicked on existing point for dragging
+                if not adding_point and not removing_point and not custom_line_mode:
+                    for i in range(len(x)):
+                        dx = graph_x - x[i]
+                        dy = graph_y - y[i]
+                        if math.sqrt(dx*dx + dy*dy) < 10:  # 10px radius for selection
+                            dragging_point = i
+                            break
+                
+                # Add new point if in add mode
+                elif adding_point:
+                    x = np.append(x, graph_x)
+                    y = np.append(y, graph_y)
+                    target_m, target_b = best_fit_line(x, y)
+                
+                # Remove point if in remove mode
+                elif removing_point:
+                    for i in range(len(x)):
+                        dx = graph_x - x[i]
+                        dy = graph_y - y[i]
+                        if math.sqrt(dx*dx + dy*dy) < 10:  # 10px radius for selection
+                            x = np.delete(x, i)
+                            y = np.delete(y, i)
+                            target_m, target_b = best_fit_line(x, y)
+                            break
+        
+        # Mouse button up event
+        elif event.type == pygame.MOUSEBUTTONUP:
+            if dragging_point is not None:
+                dragging_point = None
+                # Update best fit line
+                target_m, target_b = best_fit_line(x, y)
+        
+        # Mouse motion event
+        elif event.type == pygame.MOUSEMOTION:
+            mouse_pos = pygame.mouse.get_pos()
+            graph_x, graph_y = screen_to_graph(mouse_pos[0], mouse_pos[1])
+            
+            # Only handle inside graph area
+            if (0 <= graph_x <= graph_width and 0 <= graph_y <= graph_height):
+                if dragging_point is not None:
+                    x[dragging_point] = graph_x
+                    y[dragging_point] = graph_y
+                
+                # Update custom line in custom line mode
+                if custom_line_mode:
+                    # Calculate slope based on mouse position relative to center
+                    center_x, center_y = graph_width/2, graph_height/2
+                    dx = graph_x - center_x
+                    dy = center_y - graph_y  # Inverted y-axis
+                    
+                    # Avoid division by zero and limit extreme slopes
+                    if abs(dx) < 5:
+                        dx = 5 if dx >= 0 else -5
+                    
+                    custom_m = dy / dx
+                    # Keep slope in reasonable range
+                    custom_m = max(min(custom_m, 5), -5)
+                    
+                    # Adjust intercept to pass through mouse position
+                    custom_b = graph_y - custom_m * graph_x
 
-st.sidebar.markdown("---")
-st.sidebar.info("This app demonstrates linear regression for tip prediction. Generate new data, explore the model, and test your understanding!")
+    # Clear the screen
+    screen.fill(WHITE)
+    
+    # Draw axes
+    # X-axis
+    pygame.draw.line(screen, BLACK, 
+                    graph_to_screen(0, graph_height), 
+                    graph_to_screen(graph_width, graph_height), 3)
+    # Y-axis
+    pygame.draw.line(screen, BLACK, 
+                    graph_to_screen(0, 0), 
+                    graph_to_screen(0, graph_height), 3)
+    
+    # Draw axis labels
+    x_label = axis_font.render("X", True, BLACK)
+    y_label = axis_font.render("Y", True, BLACK)
+    screen.blit(x_label, graph_to_screen(graph_width - 20, graph_height + 25))
+    screen.blit(y_label, graph_to_screen(-20, 10))
+    
+    # Draw axis ticks and values
+    for i in range(0, graph_width, grid_spacing):
+        if i > 0:  # Skip origin
+            # Tick mark
+            pygame.draw.line(screen, BLACK, 
+                           graph_to_screen(i, graph_height - 5), 
+                           graph_to_screen(i, graph_height + 5), 2)
+            # Value
+            tick_label = axis_font.render(str(i), True, BLACK)
+            screen.blit(tick_label, graph_to_screen(i - 10, graph_height + 15))
+    
+    for i in range(0, graph_height, grid_spacing):
+        if i > 0:  # Skip origin
+            # Tick mark
+            pygame.draw.line(screen, BLACK, 
+                           graph_to_screen(-5, graph_height - i), 
+                           graph_to_screen(5, graph_height - i), 2)
+            # Value
+            tick_label = axis_font.render(str(i), True, BLACK)
+            screen.blit(tick_label, graph_to_screen(-40, graph_height - i - 10))
+    
+    # Draw origin label
+    origin_label = axis_font.render("0", True, BLACK)
+    screen.blit(origin_label, graph_to_screen(-15, graph_height + 15))
+    
+    # Draw grid if enabled
+    if show_grid:
+        for i in range(0, graph_width, grid_spacing):
+            pygame.draw.line(screen, GRAY, 
+                           graph_to_screen(i, 0), 
+                           graph_to_screen(i, graph_height), 1)
+        for i in range(0, graph_height, grid_spacing):
+            pygame.draw.line(screen, GRAY, 
+                           graph_to_screen(0, i), 
+                           graph_to_screen(graph_width, i), 1)
+    
+    # Draw data points
+    for i in range(len(x)):
+        screen_x, screen_y = graph_to_screen(x[i], y[i])
+        pygame.draw.circle(screen, RED, (int(screen_x), int(screen_y)), 7)
+        # Highlight dragged point
+        if dragging_point == i:
+            pygame.draw.circle(screen, ORANGE, (int(screen_x), int(screen_y)), 10, 2)
+    
+    # Calculate current best fit line metrics
+    r_squared = calculate_r_squared(x, y, current_m, current_b)
+    mse = calculate_mse(x, y, current_m, current_b)
+    
+    if custom_line_mode:
+        # Draw custom line across graph area
+        start_x, start_y = graph_to_screen(0, custom_b)
+        end_x, end_y = graph_to_screen(graph_width, custom_m * graph_width + custom_b)
+        pygame.draw.line(screen, GREEN, (start_x, start_y), (end_x, end_y), 3)
+        
+        # Calculate and draw residuals for custom line if enabled
+        if show_residuals and len(x) > 0:
+            for i in range(len(x)):
+                y_pred = custom_m * x[i] + custom_b
+                start_x, start_y = graph_to_screen(x[i], y[i])
+                end_x, end_y = graph_to_screen(x[i], y_pred)
+                pygame.draw.line(screen, GREEN, (start_x, start_y), (end_x, end_y), 2)
+        
+        # Calculate custom line metrics
+        custom_r_squared = calculate_r_squared(x, y, custom_m, custom_b)
+        custom_mse = calculate_mse(x, y, custom_m, custom_b)
+    else:
+        # Animate the line of best fit
+        current_m += (target_m - current_m) * animation_speed
+        current_b += (target_b - current_b) * animation_speed
+        
+        # Draw the current line of best fit across graph area
+        start_x, start_y = graph_to_screen(0, current_b)
+        end_x, end_y = graph_to_screen(graph_width, current_m * graph_width + current_b)
+        pygame.draw.line(screen, BLUE, (start_x, start_y), (end_x, end_y), 3)
+        
+        # Draw residuals if enabled
+        if show_residuals and len(x) > 0:
+            for i in range(len(x)):
+                y_pred = current_m * x[i] + current_b
+                start_x, start_y = graph_to_screen(x[i], y[i])
+                end_x, end_y = graph_to_screen(x[i], y_pred)
+                pygame.draw.line(screen, LIGHT_BLUE, (start_x, start_y), (end_x, end_y), 2)
+    
+    # Draw buttons
+    for button in buttons:
+        # Draw button background
+        button_rect = pygame.Rect(button_x, button["y"], button_width, button_height)
+        
+        # Check if this is a toggle button that's active
+        is_active = False
+        if "toggle" in button and button["toggle"]:
+            if (button["action"] == "custom_line" and custom_line_mode) or \
+               (button["action"] == "add_points" and adding_point) or \
+               (button["action"] == "remove_points" and removing_point):
+                is_active = True
+        
+        # Use different color for active toggle buttons
+        if is_active:
+            pygame.draw.rect(screen, LIGHT_BLUE, button_rect)
+        else:
+            pygame.draw.rect(screen, WHITE, button_rect)
+        
+        pygame.draw.rect(screen, BLACK, button_rect, 2)
+        
+        # Draw button text
+        text_surface = font.render(button["text"], True, BLACK)
+        text_rect = text_surface.get_rect(center=button_rect.center)
+        screen.blit(text_surface, text_rect)
+    
+    # Draw title
+    title = "Interactive Line of Best Fit Demonstration"
+    title_surface = title_font.render(title, True, BLACK)
+    screen.blit(title_surface, (20, 20))
+    
+    # Draw status messages and statistics
+    if show_stats:
+        stat_x = 20
+        stat_y = height - 120
+        
+        # Instructions
+        instructions = [
+            "Drag points to move them",
+            f"Number of points: {len(x)}",
+            f"Current mode: {'Custom Line' if custom_line_mode else 'Add Points' if adding_point else 'Remove Points' if removing_point else 'Drag Points'}"
+        ]
+        
+        for i, instruction in enumerate(instructions):
+            text = font.render(instruction, True, BLACK)
+            screen.blit(text, (stat_x, stat_y + i * 25))
+        
+        # Statistics
+        stats_x = width - 400
+        stats_y = height - 120
+        
+        if custom_line_mode:
+            stats = [
+                f"Custom Line: y = {custom_m:.3f}x + {custom_b:.2f}",
+                f"R² = {custom_r_squared:.3f}",
+                f"MSE = {custom_mse:.2f}"
+            ]
+        else:
+            stats = [
+                f"Best Fit Line: y = {current_m:.3f}x + {current_b:.2f}",
+                f"R² = {r_squared:.3f}",
+                f"MSE = {mse:.2f}"
+            ]
+        
+        for i, stat in enumerate(stats):
+            text = font.render(stat, True, BLUE if not custom_line_mode else GREEN)
+            screen.blit(text, (stats_x, stats_y + i * 25))
+    
+    # Update the display
+    pygame.display.flip()
+    
+    # Control the frame rate
+    clock.tick(60)
+
+# Quit Pygame
+pygame.quit()
