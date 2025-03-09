@@ -54,7 +54,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # Title and description
-st.title("📊 Regression Model Explorer")
+st.title("📊 Regression Evaluation Metrics")
 st.markdown("**Developed by: Venugopal Adep | Enhanced Version**")
 st.markdown("Visualize your regression model and understand key performance metrics")
 
