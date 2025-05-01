@@ -40,9 +40,10 @@ def generate_data():
     x2 = x1 * 0.8 + np.random.normal(0, 1, n_samples)  # Correlated with x1
     x3 = np.random.uniform(0, 10, n_samples)  # Independent
     
-    # For heteroscedasticity demonstration
+    # For heteroscedasticity demonstration - creating more pronounced heteroscedasticity
     x_hetero = np.random.uniform(0, 10, n_samples)
-    y_hetero = 2 * x_hetero + np.random.normal(0, 0.5 + 0.5 * x_hetero, n_samples)
+    # More pronounced fan-shaped pattern with increasing variance
+    y_hetero = 2 * x_hetero + np.random.normal(0, 0.2 + 0.8 * x_hetero, n_samples)
     
     # For normality demonstration
     x_norm = np.random.uniform(0, 10, n_samples)
@@ -104,7 +105,7 @@ if assumption == "Linearity":
     
     fix_option = st.selectbox(
         "Select a transformation to apply:",
-        ["Log Transformation", "Square Root Transformation", "Polynomial Features"]
+        ["Log Transformation", "Square Root Transformation"]
     )
     
     col1, col2 = st.columns(2)
@@ -130,29 +131,6 @@ if assumption == "Linearity":
             df_transformed['y_transformed'] = np.sqrt(df_transformed['y'])
             fig = px.scatter(df_transformed, x='x', y='y_transformed', trendline="ols")
             fig.update_layout(height=400, title="sqrt(y) vs x")
-            st.plotly_chart(fig, use_container_width=True)
-            
-        elif fix_option == "Polynomial Features":
-            st.markdown("**Polynomial Regression**")
-            df_transformed = df_nonlinear.copy()
-            
-            # Create polynomial features
-            x = df_transformed['x'].values
-            y = df_transformed['y'].values
-            
-            # Fit polynomial regression
-            coeffs = np.polyfit(x, y, 2)
-            polynomial = np.poly1d(coeffs)
-            
-            # Create smooth line for plotting
-            x_line = np.linspace(min(x), max(x), 100)
-            y_line = polynomial(x_line)
-            
-            # Plot
-            fig = go.Figure()
-            fig.add_trace(go.Scatter(x=x, y=y, mode='markers', name='Data'))
-            fig.add_trace(go.Scatter(x=x_line, y=y_line, mode='lines', name='Polynomial Fit'))
-            fig.update_layout(height=400, title="Polynomial Regression")
             st.plotly_chart(fig, use_container_width=True)
 
 elif assumption == "No Multicollinearity":
@@ -307,69 +285,55 @@ elif assumption == "Homoscedasticity":
     
     st.subheader("How to Fix Heteroscedasticity")
     
-    fix_option = st.selectbox(
-        "Select a method to fix heteroscedasticity:",
-        ["Log Transformation of Dependent Variable", "Weighted Least Squares"]
-    )
+    st.markdown("""
+    ### Weighted Least Squares (WLS)
     
-    if fix_option == "Log Transformation of Dependent Variable":
-        # Apply log transformation
-        df_transformed = df_hetero.copy()
-        df_transformed['y_log'] = np.log1p(df_transformed['y'])  # log1p to handle zeros
-        
-        # Fit model on transformed data
-        x_trans = df_transformed['x'].values
-        y_trans = df_transformed['y_log'].values
-        
-        slope_trans, intercept_trans = np.polyfit(x_trans, y_trans, 1)
-        y_pred_trans = slope_trans * x_trans + intercept_trans
-        residuals_trans = y_trans - y_pred_trans
-        
-        # Plot results
+    In Weighted Least Squares (WLS), we give different weights to observations based on their variance.
+    
+    1. First, we fit an OLS model
+    2. Calculate absolute residuals
+    3. Fit a model to predict these absolute residuals
+    4. Use the reciprocal of squared fitted values as weights
+    5. Fit the final WLS model
+    """)
+    
+    # Simulate WLS results
+    np.random.seed(42)
+    weights = 1 / (0.5 + 0.1 * df_hetero['x'])
+    weighted_residuals = np.random.normal(0, 1, len(df_hetero)) / np.sqrt(weights)
+    
+    # Create before-after comparison
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.markdown("**Before: Original Residuals**")
         fig = go.Figure()
-        fig.add_trace(go.Scatter(x=y_pred_trans, y=residuals_trans, mode='markers',
-                                 marker=dict(color='green', size=8, opacity=0.6),
-                                 name='Residuals after Log Transform'))
-        fig.add_shape(type="line", x0=min(y_pred_trans), y0=0, x1=max(y_pred_trans), y1=0,
-                      line=dict(color="red", width=2))
-        
+        fig.add_trace(go.Scatter(x=y_pred, y=residuals, mode='markers',
+                                marker=dict(color='blue', size=8, opacity=0.6),
+                                name='Original Residuals'))
+        fig.add_shape(type="line", x0=min(y_pred), y0=0, x1=max(y_pred), y1=0,
+                    line=dict(color="red", width=2))
         fig.update_layout(
-            title="Residuals After Log Transformation",
+            title="Heteroscedastic Residuals",
             xaxis_title="Fitted Values",
             yaxis_title="Residuals",
-            height=500
+            height=400
         )
         st.plotly_chart(fig, use_container_width=True)
-        
-    elif fix_option == "Weighted Least Squares":
-        st.markdown("""
-        In Weighted Least Squares (WLS), we give different weights to observations based on their variance.
-        
-        1. First, we fit an OLS model
-        2. Calculate absolute residuals
-        3. Fit a model to predict these absolute residuals
-        4. Use the reciprocal of squared fitted values as weights
-        5. Fit the final WLS model
-        """)
-        
-        # Simulate WLS results
-        np.random.seed(42)
-        weights = 1 / (0.5 + 0.1 * df_hetero['x'])
-        weighted_residuals = np.random.normal(0, 1, len(df_hetero)) / np.sqrt(weights)
-        
-        # Plot results
+    
+    with col2:
+        st.markdown("**After: Weighted Least Squares**")
         fig = go.Figure()
         fig.add_trace(go.Scatter(x=y_pred, y=weighted_residuals, mode='markers',
-                                 marker=dict(color='purple', size=8, opacity=0.6),
-                                 name='Weighted Residuals'))
+                                marker=dict(color='purple', size=8, opacity=0.6),
+                                name='Weighted Residuals'))
         fig.add_shape(type="line", x0=min(y_pred), y0=0, x1=max(y_pred), y1=0,
-                      line=dict(color="red", width=2))
-        
+                    line=dict(color="red", width=2))
         fig.update_layout(
             title="Residuals After Weighted Least Squares",
             xaxis_title="Fitted Values",
             yaxis_title="Weighted Residuals",
-            height=500
+            height=400
         )
         st.plotly_chart(fig, use_container_width=True)
 
